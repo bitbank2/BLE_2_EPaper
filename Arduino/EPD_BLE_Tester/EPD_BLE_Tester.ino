@@ -1,16 +1,31 @@
 #include <OneBitDisplay.h>
+#ifdef HAL_ESP32_HAL_H_
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#else
 #include <ArduinoBLE.h>
+#endif
 #include <TIFF_G4.h>
 
 static TIFFG4 g4;
 static BLEDevice peripheral;
 static uint8_t ucBuffer[512]; // receive buffer for this characteristic
 static uint8_t ucCompressed[16384];
-static uint8_t ucImage[(400*300)/4];
+static uint8_t ucLastCommand, ucImage[(400*300)/4];
 static int iOffset, iHeightMult;
+#ifdef HAL_ESP32_HAL_H_
+static BLEUUID tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38");
+static BLEUUID tiffCharacteristic ("4b646063-6264-f3a7-8941-e65356ea82fe");
+BLEServer *pServer;
+BLEService *pService;
+BLECharacteristic *pCharacteristic;
+BLEAdvertising *pAdvertising;
+BLEAdvertisementData advertisementData;
+bool deviceConnected = false;
+#else
 BLEService tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38"); // BLE TIFF Service
 BLECharacteristic tiffCharacteristic("4b646063-6264-f3a7-8941-e65356ea82fe", BLERead | BLEWrite | BLEWriteWithoutResponse, 512);
-
+#endif
 // command bytes
 enum {
   EPD_ERASE=0,
@@ -22,18 +37,46 @@ enum {
 };
 
 ONE_BIT_DISPLAY oled, epd;
+
+#ifdef HAL_ESP32_HAL_H_
+// These values are for the Laska_Kit ESPInk board
+// with a pushbutton and pull down resistor attached
+// to the RX0/TX0 signals exposed on the 8-pin female programming header
+#define CS_PIN 5
+#define DC_PIN 17
+#define RESET_PIN 16
+#define BUSY_PIN 4
+#define CLK_PIN 18
+#define MOSI_PIN 23
+#define POWER_PIN 2
+
+#define BUTTON1 1
+#define BUTTON2 3
+#else
+// These pin assignments are for a custom e-paper
+// adapter add-on with 2 push buttons
+// for the Arduino Nano 33 BLE
 #define CS_PIN 10
 #define DC_PIN 16
 #define RESET_PIN 14
 #define BUSY_PIN 15
+#define CLK_PIN -1
+#define MOSI_PIN -1
+#define POWER_PIN -1
 
 #define BUTTON1 2
 #define BUTTON2 3
+#endif
 int iPanel = 0;
 int iMode = 0; // 0=EPD test, 1=BLE test
 #define PANEL_COUNT 22
 
-const char *szPanelNames[] = {  "EPD42_400x300", // WFT0420CZ15
+// Friendly name for the OneBitDisplay library e-paper panel types
+// The first 2 digits signify the panel size (e.g. 42 = 4.2")
+// A letter "R" after the size indicates a Black/White/RED panel
+// The X*Y indicate the native pixel resolution
+const char *szPanelNames[] = {
+  "EPD42_400x300", // WFT0420CZ15
   "EPD29_128x296",
   "EPD29B_128x296",
   "EPD29R_128x296",
@@ -56,7 +99,66 @@ const char *szPanelNames[] = {  "EPD42_400x300", // WFT0420CZ15
   "EPD583R_600x448",
   "EPD74R_640x384",
 };
+// List of supported colors for each panel type
+// 2 = Black/White, 3 = Black/White/Red
 const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
+
+// Receives BLE data writes
+void myDataWrite(uint8_t *pData, int iLen) {
+        switch (pData[0]) { // first byte is the command
+          case EPD_ERASE: // erase the display
+            memset(ucCompressed, pData[1], sizeof(ucCompressed));
+            break;
+          case EPD_DISPLAY: // display the image
+            if (iOffset > 0) {
+              oled.print("Data size: ");
+              oled.println(iOffset, DEC);
+            }
+            iHeightMult = (u8PanelColors[iPanel] == 2) ? 1:2; // double the height for BWR images
+            UnpackBuffer(ucLastCommand); // correct the pixel direction or decode the compressed data
+            epd.display();
+            break;
+          case EPD_SETOFFSET: // set output offset
+            iOffset = pData[1] | (pData[2] << 8);
+            break;
+          case EPD_DATA: // image data
+          case EPD_COMPRESSED_DATA:
+            memcpy(&ucCompressed[iOffset], &pData[1], iLen-1);
+            iOffset += (iLen-1);
+            break;
+        }
+        ucLastCommand = pData[0];
+}
+
+#ifdef HAL_ESP32_HAL_H_
+
+class MyServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+  };
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+  }
+};
+class CharacteristicCallbacks: public BLECharacteristicCallbacks {
+     void onWrite(BLECharacteristic *characteristic) {
+        int len;
+        uint8_t *p;
+
+        std::string rxValue = characteristic->getValue();
+        len = rxValue.length();
+        if (len > 0) {
+            p = (uint8_t *)rxValue.c_str();
+         // normal packet, pass it along
+         myDataWrite(p, len);
+        } // if (len > 0)
+     }/* onWrite() */
+
+//     void onRead (BLECharacteristic *characteristic) {
+//        characteristic->setValue(u16Buttons);
+//     } /* onRead() */
+};
+#endif // ESP32
 
 void TIFFDraw(TIFFDRAW *pDraw)
 {
@@ -113,22 +215,57 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
 
 void epdBegin()
 {
-  epd.setSPIPins(CS_PIN, -1, -1, DC_PIN, RESET_PIN, BUSY_PIN);
+  if (POWER_PIN != -1) {
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, HIGH);
+    delay(100); // allow time to settle
+  }
+  epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
   epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
   epd.setBuffer(ucImage);
 } /* epdBegin() */
 
 void BLETest(void)
 {
-uint8_t ucLastCommand = EPD_COUNT;
+  ucLastCommand = EPD_COUNT;
   epdBegin();
   oled.fillScreen(OBD_WHITE);
   oled.setFont(FONT_12x16);
+#ifdef HAL_ESP32_HAL_H_
+    BLEDevice::init("EPD_Tester");
+#else
   if (!BLE.begin()) {
     oled.println("BLE failed");
     while (1);
   }
+#endif
   oled.println("Waiting...");
+#ifdef HAL_ESP32_HAL_H_
+  BLEDevice::setMTU(256); // allow bigger MTU size
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+  pService = pServer->createService(tiffService);
+ 
+  pCharacteristic = pService->createCharacteristic(
+                                         tiffCharacteristic,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE |
+                                         BLECharacteristic::PROPERTY_WRITE_NR
+                                       );
+  pCharacteristic->setCallbacks(new CharacteristicCallbacks());
+//  pCharacteristic->setValue(u16Buttons);
+  pService->start();
+  pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(tiffService);
+//  pAdvertising->setScanResponse(true);
+//  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+//  pAdvertising->setMinPreferred(0x12);
+  advertisementData.setShortName("EPD_Tester");
+  advertisementData.setManufacturerData((char *)&iPanel);
+  pAdvertising->setAdvertisementData(advertisementData);
+ 
+  BLEDevice::startAdvertising();
+#else
    BLE.setDeviceName("EPD_Tester");
    BLE.setLocalName("EPD_Tester");
    BLE.setManufacturerData((const uint8_t *)&iPanel, 4);
@@ -138,7 +275,24 @@ uint8_t ucLastCommand = EPD_COUNT;
    BLE.addService(tiffService);
    // start advertising
    BLE.advertise();
+#endif
+
    while (1) {
+  #ifdef HAL_ESP32_HAL_H_
+  // wait for a connection
+    while (!deviceConnected) {
+      delay(20);
+    }
+    oled.setCursor(0,0);
+    oled.println("Connected!");
+    while (deviceConnected) {
+      
+    }
+    oled.fillScreen(OBD_WHITE);
+    BLEDevice::stopAdvertising();
+    BLEDevice::deinit();
+    return; // disconnected, return to main menu
+  #else
   // listen for BLE peripherals to connect:
   BLEDevice central = BLE.central();
 
@@ -156,35 +310,15 @@ uint8_t ucLastCommand = EPD_COUNT;
       if (tiffCharacteristic.written()) {
         int iLen = tiffCharacteristic.valueLength();
         tiffCharacteristic.readValue(ucBuffer, iLen);
-        switch (ucBuffer[0]) { // first byte is the command
-          case EPD_ERASE: // erase the display
-            memset(ucCompressed, ucBuffer[1], sizeof(ucCompressed));
-            break;
-          case EPD_DISPLAY: // display the image
-            if (iOffset > 0) {
-              oled.print("Data size: ");
-              oled.println(iOffset, DEC);
-            }
-            iHeightMult = (u8PanelColors[iPanel] == 2) ? 1:2; // double the height for BWR images
-            UnpackBuffer(ucLastCommand); // correct the pixel direction or decode the compressed data
-            epd.display();
-            break;
-          case EPD_SETOFFSET: // set output offset
-            iOffset = ucBuffer[1] | (ucBuffer[2] << 8);
-            break;
-          case EPD_DATA: // image data
-          case EPD_COMPRESSED_DATA:
-            memcpy(&ucCompressed[iOffset], &ucBuffer[1], iLen-1);
-            iOffset += (iLen-1);
-            break;
-        }
-        ucLastCommand = ucBuffer[0];
+        myDataWrite(ucBuffer, iLen);
       }
     } // while connected
     oled.fillScreen(OBD_WHITE);
     BLE.end();
     return; // disconnected, return to main menu
   } // if central
+#endif // Nano33
+
   } // while (1)
 } /* BLEStart() */
 

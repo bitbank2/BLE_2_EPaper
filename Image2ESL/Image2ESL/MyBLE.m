@@ -59,10 +59,13 @@ static NSString *ESLChar = @"4b646063-6264-f3a7-8941-e65356ea82fe";
             // get manufacturing data (EPD panel type)
             NSData *md = [advertisementData objectForKey:CBAdvertisementDataManufacturerDataKey];
             int len = (int)[md length];
-            int32_t *p = (int32_t *)[md bytes];
-            _iPanelType = p[0]; // the e-paper panel on the remote device
-            NSLog(@"Manufacturer data: len=%d, data=0x%02x", len, p[0]);
-           
+            if (len) {
+                int32_t *p = (int32_t *)[md bytes];
+                _iPanelType = p[0]; // the e-paper panel on the remote device
+                NSLog(@"Manufacturer data: len=%d, data=0x%02x", len, p[0]);
+            } else {
+                NSLog(@"Invalid or missing manufacturer data");
+            }
         }
     }
 }
