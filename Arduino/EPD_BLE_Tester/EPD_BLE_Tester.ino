@@ -1,17 +1,28 @@
+#if defined(ARDUINO_ARDUINO_NANO33BLE) || (defined(HAL_ESP32_HAL_H_) && !defined(ARDUINO_FEATHERS2))
+#define HAS_BLE
+#define MODE_COUNT 3
+#else
+#define MODE_COUNT 2
+#endif
+
 #include <OneBitDisplay.h>
 #ifdef HAL_ESP32_HAL_H_
+// Allow e-paper panel clearing/testing to work without BLE
+#ifndef ARDUINO_FEATHERS2
 #include <BLEDevice.h>
 #include <BLEServer.h>
+#endif
 #else
 #include <ArduinoBLE.h>
 #endif
 #include <TIFF_G4.h>
-
+static uint8_t ucImage[(400*300)/4];
 static TIFFG4 g4;
-static BLEDevice peripheral;
+//static BLEDevice peripheral;
+#ifdef HAS_BLE
 static uint8_t ucBuffer[512]; // receive buffer for this characteristic
 static uint8_t ucCompressed[16384];
-static uint8_t ucLastCommand, ucImage[(400*300)/4];
+static uint8_t ucLastCommand;
 static int iOffset, iHeightMult;
 #ifdef HAL_ESP32_HAL_H_
 static BLEUUID tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38");
@@ -32,9 +43,12 @@ enum {
   EPD_DISPLAY,
   EPD_SETOFFSET,
   EPD_DATA,
-  EPD_COMPRESSED_DATA,
+  EPD_G4_DATA,
+  EPD_PCX_DATA,
+  EPD_PNG_DATA,
   EPD_COUNT
 };
+#endif // BLE support
 
 ONE_BIT_DISPLAY oled, epd;
 
@@ -42,6 +56,15 @@ ONE_BIT_DISPLAY oled, epd;
 // These values are for the Laska_Kit ESPInk board
 // with a pushbutton and pull down resistor attached
 // to the RX0/TX0 signals exposed on the 8-pin female programming header
+#if defined (ARDUINO_FEATHERS3) || defined(ARDUINO_FEATHERS2)
+#define CS_PIN 5
+#define DC_PIN 6
+#define RESET_PIN 12
+#define BUSY_PIN 14
+#define CLK_PIN 36
+#define MOSI_PIN 35
+#define POWER_PIN 39
+#else // must be Laska_Kit ESPInk
 #define CS_PIN 5
 #define DC_PIN 17
 #define RESET_PIN 16
@@ -49,6 +72,7 @@ ONE_BIT_DISPLAY oled, epd;
 #define CLK_PIN 18
 #define MOSI_PIN 23
 #define POWER_PIN 2
+#endif
 
 #define BUTTON1 1
 #define BUTTON2 3
@@ -103,6 +127,8 @@ const char *szPanelNames[] = {
 // 2 = Black/White, 3 = Black/White/Red
 const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
 
+#ifdef HAS_BLE
+
 // Receives BLE data writes
 void myDataWrite(uint8_t *pData, int iLen) {
         switch (pData[0]) { // first byte is the command
@@ -122,7 +148,9 @@ void myDataWrite(uint8_t *pData, int iLen) {
             iOffset = pData[1] | (pData[2] << 8);
             break;
           case EPD_DATA: // image data
-          case EPD_COMPRESSED_DATA:
+          case EPD_G4_DATA:
+          case EPD_PCX_DATA:
+          case EPD_PNG_DATA:
             memcpy(&ucCompressed[iOffset], &pData[1], iLen-1);
             iOffset += (iLen-1);
             break;
@@ -171,7 +199,7 @@ void UnpackBuffer(uint8_t ucLastCommand)
 int iWidth = epd.width();
 int iHeight = epd.height();
 uint8_t  uc, *s, *d, ucMask, ucSrcMask;
-  if (ucLastCommand == EPD_COMPRESSED_DATA) { // it's CCITT G4
+  if (ucLastCommand == EPD_G4_DATA) { // it's CCITT G4
     if (g4.openRAW(iWidth*iHeightMult, iHeight, BITDIR_MSB_FIRST, ucCompressed, iOffset, TIFFDraw))
     {
       g4.setDrawParameters(1.0f, TIFF_PIXEL_1BPP, 0, 0, iWidth*iHeightMult, iHeight, NULL);
@@ -183,6 +211,24 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
       g4.close();
       memcpy(ucCompressed, ucImage, (((iWidth*iHeightMult)+7)>> 3) * iHeight); // copy back to original buffer to be rotated
     }
+  } else if (ucLastCommand == EPD_PCX_DATA) { // PCX run-length compressed
+    uint8_t *pEnd = ucCompressed + iOffset; // end of data
+    s = ucCompressed;
+      oled.println("PCX");
+      d = ucImage;
+      while (s < pEnd) {
+        uc = *s++;
+        if (uc >= 0xc0) { // repeating byte
+          memset(d, s[0], uc & 0x3f); // up to 63 of the same byte repeated
+          s++;
+          d += (uc & 0x3f);
+        } else {
+          *d++ = uc; // just store it
+        }
+      } // while decoding PCX
+      memcpy(ucCompressed, ucImage, (((iWidth*iHeightMult)+7)>> 3) * iHeight); // copy back to original buffer to be rotated
+  } else {
+      oled.println("Uncompressed");
   }
   s = ucCompressed;
   ucMask = 1;
@@ -212,18 +258,6 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
     }
   } // for y
 } /* UnpackBuffer() */
-
-void epdBegin()
-{
-  if (POWER_PIN != -1) {
-    pinMode(POWER_PIN, OUTPUT);
-    digitalWrite(POWER_PIN, HIGH);
-    delay(100); // allow time to settle
-  }
-  epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
-  epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
-  epd.setBuffer(ucImage);
-} /* epdBegin() */
 
 void BLETest(void)
 {
@@ -320,7 +354,21 @@ void BLETest(void)
 #endif // Nano33
 
   } // while (1)
-} /* BLEStart() */
+} /* BLETest() */
+
+#endif // HAS_BLE
+
+void epdBegin()
+{
+  if (POWER_PIN != -1) {
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, HIGH);
+    delay(100); // allow time to settle
+  }
+  epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
+  epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
+  epd.setBuffer(ucImage);
+} /* epdBegin() */
 
 void ShowInfo(void)
 {
@@ -336,9 +384,9 @@ void ShowInfo(void)
   if (iMode == 0)
     oled.println(" EPD test");
   else if (iMode == 1)
-    oled.println(" BLE test");
-  else
     oled.println(" Clear EPD");
+  else
+    oled.println(" BLE test");
   oled.setFont(FONT_6x8);
   oled.print("(press&hold to exec)");
 } /* ShowInfo() */
@@ -403,16 +451,18 @@ void loop() {
        iTime = millis() - iTime;
        if (iTime < 1000) {
          iMode++;
-         if (iMode > 2) iMode = 0;
+         if (iMode >= MODE_COUNT) iMode = 0;
          ShowInfo();
        } else {
          // start the operation
          if (iMode == 0) { // EPD test
             EPDTest();
          } else if (iMode == 1) {
-            BLETest();
-         } else {
             EPDClear();
+         } else {
+#ifdef HAS_BLE
+            BLETest();
+#endif
          }
          ShowInfo(); // repaint the main menu info
        }

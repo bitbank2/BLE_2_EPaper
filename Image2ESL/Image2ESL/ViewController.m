@@ -11,6 +11,12 @@
 #include "G4ENCODER.h"
 
 G4ENCIMAGE g4;
+// max compressed data size
+#define OUTBUFFER_SIZE 65536
+#define DATA_UNCOMPRESSED 3
+#define DATA_CCITTG4 4
+#define DATA_PCX 5
+#define DATA_PNG 6
 
 MyBLE *BLEClass;
 uint8_t contrast_lookup[256];
@@ -318,74 +324,191 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     } // for y
     *d++ = uc; // store last partial byte
 } /* getRotatedLine() */
+
+// Compress an image using CCITT G4 encoding
+- (int)compressG4:(uint8_t *)pSource dest:(uint8_t *)pDest
+{
+    int x, iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
+    uint8_t *s, ucTemp[256];
+    int rc = G4ENC_init(&g4, iHeight*iHeightMult, iWidth, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
+    if (rc == G4ENC_SUCCESS) {
+        for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
+            // rotate the image 90
+            s = &pSource[x >> 3];
+            [self getRotatedLine: s current_x:x destination:ucTemp];
+            rc = G4ENC_addLine(&g4, ucTemp);
+        } // for each line of image
+    } // successful init
+    return G4ENC_getOutSize(&g4);
+} /* compressG4() */
+
+// Compress an image using the "PCX" style run length encoding. It encodes runs of repeating bytes as well
+// as blocks of non-repeating bytes with a reasonable balance.
+- (int)compressPCX:(uint8_t *)pSource dest:(uint8_t *)pDest
+{
+    int iOutSize;
+    int x, y, iPitch, iRepeat;
+    uint8_t *s, *pStart, c, cCompare;
+    uint8_t ucTemp[256];
+    int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
+    
+    pStart = pDest;
+    s = &pSource[(iWidth-1) >> 3];
+    [self getRotatedLine: s current_x:iWidth-1 destination:ucTemp];
+    cCompare = ucTemp[0]; // grab first byte for comparison
+    iRepeat = 0;
+    iPitch = (iHeight*iHeightMult+7) >> 3;
+    for (x=iWidth-1; x>=0; x--)
+    {
+        s = &pSource[x >> 3];
+        [self getRotatedLine: s current_x:x destination:ucTemp];
+        s = ucTemp;
+        for (y=0; y<iPitch; y++)
+        {
+            c = *s++;
+            if (c == cCompare) // another repeat byte?
+            {
+                iRepeat++;
+            }
+            else
+            {
+                while (iRepeat > 63) // store max repeat count
+                {
+                    pDest[0] = 0xff; // max repeat count = 63;
+                    pDest[1] = cCompare; // byte to repeat
+                    pDest += 2;
+                    iRepeat -= 63;
+                }
+                if (iRepeat > 1) // more than 1 of the same byte, store it
+                {
+                    pDest[0] = (unsigned char)(iRepeat | 0xc0);
+                    pDest[1] = cCompare;
+                    pDest += 2;
+                }
+                else
+                {
+                    if (cCompare >= 0xc0) // same characteristics as repeat code, special case
+                    {
+                        pDest[0] = 0xc1; // store as a repeat of 1
+                        pDest[1] = cCompare;
+                        pDest += 2;
+                    }
+                    else
+                        *pDest++ = cCompare; // just store the byte
+                }
+                iRepeat = 1;   // new repeat count of 1
+                cCompare = c; // the current byte becomes the one to repeat
+            }
+        } // for y
+    } // x
+    // store any remaining repeating bytes
+    while (iRepeat > 63) // store max repeat count
+    {
+        pDest[0] = 0xff; // max repeat count = 63;
+        pDest[1] = cCompare; // byte to repeat
+        pDest += 2;
+        iRepeat -= 63;
+    }
+    if (iRepeat > 1) // if anything left
+    {
+        pDest[0] = (unsigned char)(iRepeat | 0xc0);
+        pDest[1] = cCompare;
+        pDest += 2;
+    }
+    else
+    {
+        if (cCompare >= 0xc0) // same characteristics as repeat code, special case
+        {
+            pDest[0] = 0xc1; // store as a repeat of 1
+            pDest[1] = cCompare;
+            pDest += 2;
+        }
+        else
+            *pDest++ = cCompare; // just store the byte
+    }
+    iOutSize = (int)(pDest - pStart);
+    return iOutSize;
+} /* compressPCX() */
+
 //
-// Send the image that was previously dithered
-// to the connected ESL
+// Send compressed image data in MTUs up to 200 bytes each
+//
+- (int)sendCompressed:(uint8_t *)pData type:(uint8_t)u8Type size:(int)iSize
+{
+    uint8_t ucTemp[256];
+    int x, y, iLen, iSent = 0;
+    
+    ucTemp[0] = u8Type; // image data type
+    x = iSize;
+    y = 0;
+    while (x) { // send in relatively large blocks
+        iLen = 199;
+        if (iLen > x) iLen = x;
+        memcpy(&ucTemp[1], &pData[y], iLen); // send up to 200 bytes total per write
+        [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
+        iSent += iLen+1;
+        x -= iLen;
+        y += iLen;
+    }
+    return iSent;
+} /* sendCompressed() */
+
+//
+// Send the image to the connected ESL
 //
 - (void)sendImage
 {
     uint8_t *s, *d, ucTemp[256]; // holds each packet to send
-    int x, y, iLen, iTotal;
+    int x, iSent, iTotal, iG4Total, iPCXTotal;
+    uint8_t *pG4Out, *pPCXOut;
     int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     int iPitch = ((iHeight*iHeightMult)+7)/8;
     if (pDithered == NULL) return; // no image to send
-    
+    pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
+    pG4Out = malloc(OUTBUFFER_SIZE);
+    iTotal = ((iWidth + 7)>>3) * iHeight*iHeightMult;
+    NSLog(@"Uncompressed size = %d", iTotal);
+    // Test if it can be compressed
+    iPCXTotal = [self compressPCX:pDithered dest:pPCXOut];
+    NSLog(@"PCX compressed size = %d", iPCXTotal);
+    iG4Total = [self compressG4:pDithered dest:pG4Out];
+    NSLog(@"G4 compressed size = %d", iG4Total);
     // Now send it to the ESL
     ucTemp[0] = 0x02; // set byte pos
     ucTemp[1] = ucTemp[2] = 0; // start of image
     [BLEClass writeData:ucTemp withLength:3 withResponse:NO];
     [NSThread sleepForTimeInterval: 0.01];
-    if (_DitherCheck.state == NSControlStateValueOff) { // try compressing as CCITT G4
-        uint8_t *pOut = malloc(65536); // max reasonable size
-        int rc = G4ENC_init(&g4, iHeight*iHeightMult, iWidth, G4ENC_MSB_FIRST, NULL, pOut, 65536);
-        if (rc == G4ENC_SUCCESS) {
-            for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
-                // rotate the image 90
-                s = &pDithered[x >> 3];
-                [self getRotatedLine: s current_x:x destination:ucTemp];
-                rc = G4ENC_addLine(&g4, ucTemp);
-            } // for each line of image
-        } // successful init
-        iTotal = G4ENC_getOutSize(&g4);
-        NSLog(@"G4 compressed size = %d", iTotal);
-        if (iTotal < iPitch * iWidth) { // G4 beat uncompressed
-            ucTemp[0] = 0x04; // compressed image data
-            x = iTotal;
-            y = 0;
-            while (x) { // send in relatively large blocks
-                iLen = 199;
-                if (iLen > x) iLen = x;
-                memcpy(&ucTemp[1], &pOut[y], iLen); // send up to 200 bytes total per write
-                [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
-                x -= iLen;
-                y += iLen;
+    if (iG4Total < iTotal && iG4Total < iPCXTotal) { // G4 beat uncompressed and PCX
+        iSent = [self sendCompressed:pG4Out type:DATA_CCITTG4 size:iG4Total];
+    } else if (iPCXTotal < iG4Total && iPCXTotal < iTotal) { // PCX beat uncompressed and G4
+        iSent = [self sendCompressed:pPCXOut type:DATA_PCX size:iPCXTotal];
+    } else { // send uncompressed
+        // transmit the uncompressed data rotated since the memory is laid out 90 degrees clockwise rotated
+        iSent = 0;
+        ucTemp[0] = DATA_UNCOMPRESSED; // uncompressed image data
+        d = &ucTemp[1];
+        for (x=iWidth-1; x>=0; x--) {
+            s = &pDithered[x>>3];
+            [self getRotatedLine: s current_x:x destination: d];
+            d += iPitch;
+            if (d - ucTemp >= 200) {
+                [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
+                iSent += (int)(d-ucTemp);
+                d = &ucTemp[1];
             }
-            ucTemp[0] = 0x01; // display the new image data
-            [BLEClass writeData:ucTemp withLength:1 withResponse:YES];
-            return; // all done
-        } // G4 beats uncompressed
-    }
-    // transmit it rotated since the memory is laid out 90 degrees clockwise rotated
-    iTotal = 0;
-    ucTemp[0] = 0x03; // image data
-    d = &ucTemp[1];
-    for (x=iWidth-1; x>=0; x--) {
-        s = &pDithered[x>>3];
-        [self getRotatedLine: s current_x:x destination: d];
-        d += iPitch;
-        if (d - ucTemp >= 200) {
+            //        [NSThread sleepForTimeInterval: 0.01];
+        } // for x
+        if (d-ucTemp > 1) { // send the last block
             [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-            d = &ucTemp[1];
+            iSent += (int)(d-ucTemp);
         }
-        iTotal += iPitch;
-//        [NSThread sleepForTimeInterval: 0.01];
-    } // for x
-    if (d-ucTemp > 1) { // send the last block
-        [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-    }
-    NSLog(@"Total image bytes sent = %d", iTotal);
+    } // uncompressed
     ucTemp[0] = 0x01; // display the new image data
     [BLEClass writeData:ucTemp withLength:1 withResponse:NO];
+    NSLog(@"Total bytes sent over BLE = %d", iSent+1);
+    // Free local compressed data buffers
+    free(pPCXOut);
+    free(pG4Out);
 } /* sendImage */
 
 - (void)statusChanged:(NSNotification *) notification
