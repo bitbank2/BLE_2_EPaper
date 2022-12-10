@@ -16,14 +16,14 @@
 #include <ArduinoBLE.h>
 #endif
 #include <TIFF_G4.h>
-static uint8_t ucImage[(400*300)/4];
+static uint8_t ucImage[(640*480)/4];
 static TIFFG4 g4;
 //static BLEDevice peripheral;
 #ifdef HAS_BLE
 static uint8_t ucBuffer[512]; // receive buffer for this characteristic
-static uint8_t ucCompressed[16384];
+static uint8_t ucCompressed[65536];
 static uint8_t ucLastCommand;
-static int iOffset, iHeightMult;
+static int iOffset, iWidthMult, iHeightMult;
 #ifdef HAL_ESP32_HAL_H_
 static BLEUUID tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38");
 static BLEUUID tiffCharacteristic ("4b646063-6264-f3a7-8941-e65356ea82fe");
@@ -126,6 +126,7 @@ const char *szPanelNames[] = {
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
 const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
+const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
 
 #ifdef HAS_BLE
 
@@ -140,7 +141,11 @@ void myDataWrite(uint8_t *pData, int iLen) {
               oled.print("Data size: ");
               oled.println(iOffset, DEC);
             }
-            iHeightMult = (u8PanelColors[iPanel] == 2) ? 1:2; // double the height for BWR images
+            iWidthMult = iHeightMult = 1;
+            if (u8IsRotated[iPanel])
+              iWidthMult = (u8PanelColors[iPanel] == 2) ? 1:2; // double the height for BWR images
+            else
+              iHeightMult = (u8PanelColors[iPanel] == 2) ? 1:2; 
             UnpackBuffer(ucLastCommand); // correct the pixel direction or decode the compressed data
             epd.display();
             break;
@@ -153,6 +158,9 @@ void myDataWrite(uint8_t *pData, int iLen) {
           case EPD_PNG_DATA:
             memcpy(&ucCompressed[iOffset], &pData[1], iLen-1);
             iOffset += (iLen-1);
+           // oled.setCursor(0,56);
+           // oled.print("size: ");
+           // oled.println(iOffset, DEC);
             break;
         }
         ucLastCommand = pData[0];
@@ -200,16 +208,19 @@ int iWidth = epd.width();
 int iHeight = epd.height();
 uint8_t  uc, *s, *d, ucMask, ucSrcMask;
   if (ucLastCommand == EPD_G4_DATA) { // it's CCITT G4
-    if (g4.openRAW(iWidth*iHeightMult, iHeight, BITDIR_MSB_FIRST, ucCompressed, iOffset, TIFFDraw))
+    if (g4.openRAW(iWidth*iWidthMult, iHeight*iHeightMult, BITDIR_MSB_FIRST, ucCompressed, iOffset, TIFFDraw))
     {
-      g4.setDrawParameters(1.0f, TIFF_PIXEL_1BPP, 0, 0, iWidth*iHeightMult, iHeight, NULL);
-      oled.println("CCITT G4");
+      g4.setDrawParameters(1.0f, TIFF_PIXEL_1BPP, 0, 0, iWidth*iWidthMult, iHeight*iHeightMult, NULL);
+      oled.print("G4 ");
+      oled.print(iWidth*iWidthMult, DEC);
+      oled.print("*");
+      oled.println(iHeight*iHeightMult, DEC);
       if (g4.decode(0,0) != TIFF_SUCCESS)
          oled.println("decode error");
       else
          oled.println("decode success");
       g4.close();
-      memcpy(ucCompressed, ucImage, (((iWidth*iHeightMult)+7)>> 3) * iHeight); // copy back to original buffer to be rotated
+      memcpy(ucCompressed, ucImage, (((iWidth*iWidthMult)+7)>> 3) * iHeight*iHeightMult); // copy back to original buffer to be rotated
     }
   } else if (ucLastCommand == EPD_PCX_DATA) { // PCX run-length compressed
     uint8_t *pEnd = ucCompressed + iOffset; // end of data
@@ -232,10 +243,10 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
   }
   s = ucCompressed;
   ucMask = 1;
-  for (int y=0; y<iHeight; y++) {
+  for (int y=0; y<iHeight*iHeightMult; y++) {
     d = &ucImage[(y>>3) * iWidth];
     ucSrcMask = 0; // force realign to start of next whole byte at the start of each line
-  for (int x=0; x<iWidth*iHeightMult; x++) {
+  for (int x=0; x<iWidth*iWidthMult; x++) {
       if (x == iWidth) { // adjust for second memory plane
          d += (iWidth * ((iHeight+7)>>3));
          d -= iWidth;
@@ -366,7 +377,7 @@ void epdBegin()
     delay(100); // allow time to settle
   }
   epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
-  epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
+  epd.SPIbegin(iPanel + EPD42_400x300, 4000000); // initalize library for this panel
   epd.setBuffer(ucImage);
 } /* epdBegin() */
 

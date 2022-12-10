@@ -47,6 +47,7 @@ const char *szPanelNames[] = {  "EPD42_400x300", // WFT0420CZ15
   "EPD74R_640x384",
 };
 const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
+const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
 
 const int iPanelWidths[] = {400, 296, 296, 296, 296, 400, 400, 212, 212, 212, 212, 250, 250, 152, 152, 200, 264, 264, 296, 792, 600, 640};
 const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 104, 122, 122, 152, 152, 200, 176, 176, 152, 272, 448, 384};
@@ -125,8 +126,8 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     uint8_t cOut, cOut1; // forward errors for gray
     uint8_t *pSrc, *pDest, *errors, *pErrors=NULL, *d, *s; // destination 8bpp image
     uint8_t pixelmask=0, shift=0;
-    uint8_t ucTemp[400];
-    int32_t iErrors[400*3];
+    uint8_t ucTemp[1024];
+    int32_t iErrors[1024*3];
     errors = ucTemp; // plenty of space here for the bitmaps we'll generate
     memset(ucTemp, 0, sizeof(ucTemp));
     pSrc = pPixels; // write the new pixels over the original
@@ -328,19 +329,81 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 // Compress an image using CCITT G4 encoding
 - (int)compressG4:(uint8_t *)pSource dest:(uint8_t *)pDest
 {
-    int x, iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
+    int x, y, iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     uint8_t *s, ucTemp[256];
-    int rc = G4ENC_init(&g4, iHeight*iHeightMult, iWidth, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
-    if (rc == G4ENC_SUCCESS) {
-        for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
-            // rotate the image 90
-            s = &pSource[x >> 3];
-            [self getRotatedLine: s current_x:x destination:ucTemp];
-            rc = G4ENC_addLine(&g4, ucTemp);
-        } // for each line of image
-    } // successful init
+    int iPitch, rc;
+    if (u8IsRotated[BLEClass.iPanelType]) { // rotated 90
+        rc = G4ENC_init(&g4, iHeight*iHeightMult, iWidth, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
+        if (rc == G4ENC_SUCCESS) {
+            for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
+                // rotate the image 90
+                s = &pSource[x >> 3];
+                [self getRotatedLine: s current_x:x destination:ucTemp];
+                rc = G4ENC_addLine(&g4, ucTemp);
+            } // for each line of image
+        } // successful init
+    } else { // not rotated
+        iPitch = (iWidth+7)>>3;
+        rc = G4ENC_init(&g4, iWidth, iHeight*iHeightMult, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
+        if (rc == G4ENC_SUCCESS) {
+            for (y=0; y<iHeight*iHeightMult && rc == G4ENC_SUCCESS; y++) {
+                s = &pSource[y*iPitch];
+                for (int i=0; i<iPitch; i++) {
+                    ucTemp[i] = ~s[i]; // invert the pixels
+                }
+                rc = G4ENC_addLine(&g4, ucTemp);
+            } // for each line of image
+        } // successful init
+    }
     return G4ENC_getOutSize(&g4);
 } /* compressG4() */
+
+// Compress a single PCX line
+- (uint8_t) PCXLine:(uint8_t *)s dest:(uint8_t **)ppDest compare:(uint8_t)cCompare line_length:(int)iLen repeats:(int *)pRepeat
+{
+    int iRepeat = *pRepeat;
+    uint8_t *pDest = *ppDest;
+    for (int i=0; i<iLen; i++)
+    {
+        uint8_t c = *s++;
+        if (c == cCompare) // another repeat byte?
+        {
+            iRepeat++;
+        }
+        else
+        {
+            while (iRepeat > 63) // store max repeat count
+            {
+                pDest[0] = 0xff; // max repeat count = 63;
+                pDest[1] = cCompare; // byte to repeat
+                pDest += 2;
+                iRepeat -= 63;
+            }
+            if (iRepeat > 1) // more than 1 of the same byte, store it
+            {
+                pDest[0] = (unsigned char)(iRepeat | 0xc0);
+                pDest[1] = cCompare;
+                pDest += 2;
+            }
+            else
+            {
+                if (cCompare >= 0xc0) // same characteristics as repeat code, special case
+                {
+                    pDest[0] = 0xc1; // store as a repeat of 1
+                    pDest[1] = cCompare;
+                    pDest += 2;
+                }
+                else
+                    *pDest++ = cCompare; // just store the byte
+            }
+            iRepeat = 1;   // new repeat count of 1
+            cCompare = c; // the current byte becomes the one to repeat
+        }
+    } // for each byte of image
+    *pRepeat = iRepeat;
+    *ppDest = pDest;
+    return cCompare;
+} /* PCXLine() */
 
 // Compress an image using the "PCX" style run length encoding. It encodes runs of repeating bytes as well
 // as blocks of non-repeating bytes with a reasonable balance.
@@ -348,59 +411,36 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 {
     int iOutSize;
     int x, y, iPitch, iRepeat;
-    uint8_t *s, *pStart, c, cCompare;
+    uint8_t *s, *pStart, cCompare = 0;
     uint8_t ucTemp[256];
     int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     
     pStart = pDest;
-    s = &pSource[(iWidth-1) >> 3];
-    [self getRotatedLine: s current_x:iWidth-1 destination:ucTemp];
-    cCompare = ucTemp[0]; // grab first byte for comparison
     iRepeat = 0;
-    iPitch = (iHeight*iHeightMult+7) >> 3;
-    for (x=iWidth-1; x>=0; x--)
-    {
-        s = &pSource[x >> 3];
-        [self getRotatedLine: s current_x:x destination:ucTemp];
-        s = ucTemp;
-        for (y=0; y<iPitch; y++)
+    if (u8IsRotated[BLEClass.iPanelType]) { // 90 degrees rotated panel
+        s = &pSource[(iWidth-1) >> 3];
+        [self getRotatedLine: s current_x:iWidth-1 destination:ucTemp];
+        cCompare = ucTemp[0]; // grab first byte for comparison
+        iPitch = (iHeight*iHeightMult+7) >> 3;
+        for (x=iWidth-1; x>=0; x--)
         {
-            c = *s++;
-            if (c == cCompare) // another repeat byte?
-            {
-                iRepeat++;
+            s = &pSource[x >> 3];
+            [self getRotatedLine: s current_x:x destination:ucTemp];
+            cCompare = [self PCXLine:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
+        } // for x
+    } else { // not rotated
+        cCompare = ~pSource[0];
+        iPitch = (iWidth+7) >> 3;
+        for (y=0; y<iHeight*iHeightMult; y++)
+        {
+            s = &pSource[y * iPitch];
+            // invert the pixels for e-paper
+            for (int i=0; i<iPitch; i++) {
+                ucTemp[i] = ~s[i];
             }
-            else
-            {
-                while (iRepeat > 63) // store max repeat count
-                {
-                    pDest[0] = 0xff; // max repeat count = 63;
-                    pDest[1] = cCompare; // byte to repeat
-                    pDest += 2;
-                    iRepeat -= 63;
-                }
-                if (iRepeat > 1) // more than 1 of the same byte, store it
-                {
-                    pDest[0] = (unsigned char)(iRepeat | 0xc0);
-                    pDest[1] = cCompare;
-                    pDest += 2;
-                }
-                else
-                {
-                    if (cCompare >= 0xc0) // same characteristics as repeat code, special case
-                    {
-                        pDest[0] = 0xc1; // store as a repeat of 1
-                        pDest[1] = cCompare;
-                        pDest += 2;
-                    }
-                    else
-                        *pDest++ = cCompare; // just store the byte
-                }
-                iRepeat = 1;   // new repeat count of 1
-                cCompare = c; // the current byte becomes the one to repeat
-            }
-        } // for y
-    } // x
+            cCompare = [self PCXLine:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
+        } // for x
+    }
     // store any remaining repeating bytes
     while (iRepeat > 63) // store max repeat count
     {
@@ -459,14 +499,19 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 - (void)sendImage
 {
     uint8_t *s, *d, ucTemp[256]; // holds each packet to send
-    int x, iSent, iTotal, iG4Total, iPCXTotal;
+    int x, y, iSent, iTotal, iG4Total, iPCXTotal;
     uint8_t *pG4Out, *pPCXOut;
     int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
-    int iPitch = ((iHeight*iHeightMult)+7)/8;
+    int iPitch;
     if (pDithered == NULL) return; // no image to send
+    if (u8IsRotated[BLEClass.iPanelType]) {
+        iPitch = ((iHeight*iHeightMult)+7)/8;
+    } else {
+        iPitch = (iWidth+7)/8;
+    }
+    iTotal = ((iWidth + 7)>>3) * iHeight*iHeightMult;
     pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
     pG4Out = malloc(OUTBUFFER_SIZE);
-    iTotal = ((iWidth + 7)>>3) * iHeight*iHeightMult;
     NSLog(@"Uncompressed size = %d", iTotal);
     // Test if it can be compressed
     iPCXTotal = [self compressPCX:pDithered dest:pPCXOut];
@@ -476,8 +521,8 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     // Now send it to the ESL
     ucTemp[0] = 0x02; // set byte pos
     ucTemp[1] = ucTemp[2] = 0; // start of image
-    [BLEClass writeData:ucTemp withLength:3 withResponse:NO];
-    [NSThread sleepForTimeInterval: 0.01];
+    [BLEClass writeData:ucTemp withLength:3 withResponse:YES];
+//    [NSThread sleepForTimeInterval: 0.01];
     if (iG4Total < iTotal && iG4Total < iPCXTotal) { // G4 beat uncompressed and PCX
         iSent = [self sendCompressed:pG4Out type:DATA_CCITTG4 size:iG4Total];
     } else if (iPCXTotal < iG4Total && iPCXTotal < iTotal) { // PCX beat uncompressed and G4
@@ -487,24 +532,43 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
         iSent = 0;
         ucTemp[0] = DATA_UNCOMPRESSED; // uncompressed image data
         d = &ucTemp[1];
-        for (x=iWidth-1; x>=0; x--) {
-            s = &pDithered[x>>3];
-            [self getRotatedLine: s current_x:x destination: d];
-            d += iPitch;
-            if (d - ucTemp >= 200) {
-                [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-                iSent += (int)(d-ucTemp);
-                d = &ucTemp[1];
-            }
-            //        [NSThread sleepForTimeInterval: 0.01];
-        } // for x
+        if (u8IsRotated[BLEClass.iPanelType]) {
+            for (x=iWidth-1; x>=0; x--) {
+                s = &pDithered[x>>3];
+                [self getRotatedLine: s current_x:x destination: d];
+                d += iPitch;
+                if (d - ucTemp >= 200) {
+                    [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
+                    iSent += (int)(d-ucTemp);
+                    d = &ucTemp[1];
+                }
+                if ((x & 0x3f) == 0) {
+                    [NSThread sleepForTimeInterval: 0.100]; // add a small sleep otherwise the BLE data gets 'stuck' in limbo
+                }
+            } // for x
+        } else { // not rotated
+            for (y=0; y<iHeight*iHeightMult; y++) {
+                s = &pDithered[y*iPitch];
+                for (int i=0; i<iPitch; i++) {
+                    *d++ = ~s[i]; // invert for e-paper
+                }
+                if (d - ucTemp >= 200) {
+                    [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
+                    iSent += (int)(d-ucTemp);
+                    d = &ucTemp[1];
+                }
+                if ((y & 0x3f) == 0) {
+                    [NSThread sleepForTimeInterval: 0.100]; // add a small sleep otherwise the BLE data gets 'stuck' in limbo
+                }
+            } // for y
+        } // not rotated
         if (d-ucTemp > 1) { // send the last block
             [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
             iSent += (int)(d-ucTemp);
         }
     } // uncompressed
     ucTemp[0] = 0x01; // display the new image data
-    [BLEClass writeData:ucTemp withLength:1 withResponse:NO];
+    [BLEClass writeData:ucTemp withLength:1 withResponse:YES];
     NSLog(@"Total bytes sent over BLE = %d", iSent+1);
     // Free local compressed data buffers
     free(pPCXOut);

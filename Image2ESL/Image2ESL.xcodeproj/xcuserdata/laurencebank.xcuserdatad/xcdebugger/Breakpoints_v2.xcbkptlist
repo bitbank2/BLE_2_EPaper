@@ -14,8 +14,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "109"
-            endingLineNumber = "109"
+            startingLineNumber = "110"
+            endingLineNumber = "110"
             landmarkName = "-TransmitPushed:"
             landmarkType = "7">
          </BreakpointContent>
@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "209"
             endingLineNumber = "209"
-            landmarkName = "-centralManager:didDiscoverPeripheral:advertisementData:RSSI:"
+            landmarkName = "-writeData:withLength:withResponse:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -48,7 +48,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "91"
             endingLineNumber = "91"
-            landmarkName = "-centralManager:didDiscoverPeripheral:advertisementData:RSSI:"
+            landmarkName = "-centralManager:didRetrievePeripherals:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -64,7 +64,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "84"
             endingLineNumber = "84"
-            landmarkName = "-centralManager:didDiscoverPeripheral:advertisementData:RSSI:"
+            landmarkName = "-centralManager:didRetrievePeripherals:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -78,24 +78,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "477"
-            endingLineNumber = "477"
-            landmarkName = "-sendImage"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "A7387134-7A8B-4554-8125-983A0A0F6E48"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Image2ESL/ViewController.m"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "491"
-            endingLineNumber = "491"
+            startingLineNumber = "522"
+            endingLineNumber = "522"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -110,8 +94,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "178"
-            endingLineNumber = "178"
+            startingLineNumber = "179"
+            endingLineNumber = "179"
             landmarkName = "-DitherImage:width:height:pitch:dither:"
             landmarkType = "7">
          </BreakpointContent>
@@ -126,8 +110,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "66"
-            endingLineNumber = "66"
+            startingLineNumber = "67"
+            endingLineNumber = "67"
             landmarkName = "-viewDidLayout"
             landmarkType = "7">
          </BreakpointContent>
@@ -158,8 +142,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "543"
-            endingLineNumber = "543"
+            startingLineNumber = "607"
+            endingLineNumber = "607"
             landmarkName = "-ditherFile:"
             landmarkType = "7">
          </BreakpointContent>
@@ -174,8 +158,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "625"
-            endingLineNumber = "625"
+            startingLineNumber = "689"
+            endingLineNumber = "689"
             landmarkName = "-ditherFile:"
             landmarkType = "7">
          </BreakpointContent>
@@ -190,8 +174,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "189"
-            endingLineNumber = "189"
+            startingLineNumber = "190"
+            endingLineNumber = "190"
             landmarkName = "-DitherImage:width:height:pitch:dither:"
             landmarkType = "7">
          </BreakpointContent>
@@ -206,8 +190,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "472"
-            endingLineNumber = "472"
+            startingLineNumber = "517"
+            endingLineNumber = "517"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -222,9 +206,57 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "363"
-            endingLineNumber = "363"
+            startingLineNumber = "427"
+            endingLineNumber = "427"
             landmarkName = "-compressPCX:dest:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "21956DCB-0B06-444C-88D9-2CCB4EEE90EC"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "546"
+            endingLineNumber = "546"
+            landmarkName = "-sendImage"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "2E911036-9E4B-4854-81F4-B2A858191EBD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "526"
+            endingLineNumber = "526"
+            landmarkName = "-sendImage"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6B6F76F6-3171-4D24-8F1A-52AFE8215F69"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "489"
+            endingLineNumber = "489"
+            landmarkName = "-sendCompressed:type:size:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
