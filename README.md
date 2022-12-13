@@ -8,3 +8,19 @@ larry@bitbanksoftware.com<br>
 <br>
 ![BLE_2_EPaper](/demo.jpg?raw=true "BLE_2_EPaper")
 <br>
+<br>
+![Fritzing Diagram](/ble_fritzing.png?raw=true "Fritzing Diagram")
+<br>
+The image above depicts the connections to an Arduino Nano 33 BLE board for this project. The following pins are used:<br>
+- Button 1 = D2<br>
+- Button 2 = D3<br>
+- E-Paper CLK = D13<br>
+- E-Paper CS = D10<br>
+- E-Paper MOSI = D12<br>
+- E-Paper RST = D14/A0<br>
+- E-Paper BUSY = D15/A1<br>
+- E-Paper D/C = D16/A2<br>
+
+Other pin combinations are certainly possible, but those are the ones I chose for the prototype.<br>
+~                                                                               
+
