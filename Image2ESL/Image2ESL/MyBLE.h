@@ -12,17 +12,19 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface MyBLE : NSObject <CBCentralManagerDelegate>
+@interface MyBLE : NSObject <CBCentralManagerDelegate, CBPeripheralDelegate>
 
 @property (nonatomic, strong) CBCentralManager *centralManager;
 
 - (instancetype)init;
 - (void)startScan;
+- (void)disconnect;
 - (void)writeData: (uint8_t *)pData withLength:(int)len withResponse:(bool)response;
 - (NSString *)getName;
 - (bool)isConnected;
 
 @property (nonatomic) int iPanelType;
+@property (nonatomic) int iMTUSize;
 @property (retain) NSMutableArray *discoveredPeripherals;
 @property (strong, nonatomic) CBCentralManager * manager;
 @property (atomic) int count;

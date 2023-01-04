@@ -711,7 +711,7 @@
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rga-zO-Ac4">
-                                <rect key="frame" x="36" y="433" width="85" height="32"/>
+                                <rect key="frame" x="36" y="433" width="106" height="32"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="push" title="Connect" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Mbh-Sd-bfa">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -722,7 +722,7 @@
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="jeq-af-i1g">
-                                <rect key="frame" x="520" y="433" width="85" height="32"/>
+                                <rect key="frame" x="503" y="433" width="102" height="32"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="push" title="Send" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zur-6x-z3a">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -751,7 +751,7 @@
                                         </textFieldCell>
                                     </textField>
                                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6BC-bo-6dw">
-                                        <rect key="frame" x="520" y="399" width="85" height="32"/>
+                                        <rect key="frame" x="506" y="399" width="99" height="32"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                         <buttonCell key="cell" type="push" title="Erase" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="HlI-n9-iHH">
                                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -774,6 +774,7 @@
                         </subviews>
                     </view>
                     <connections>
+                        <outlet property="ConnectButton" destination="rga-zO-Ac4" id="3pY-U2-sPG"/>
                         <outlet property="DitherCheck" destination="rQR-9o-KBP" id="dN9-Lg-QK1"/>
                         <outlet property="StatusLabel" destination="Zys-OO-ldj" id="UMQ-Cb-uEF"/>
                         <outlet property="myImage" destination="Cg3-ap-Mtc" id="emA-AS-2a8"/>

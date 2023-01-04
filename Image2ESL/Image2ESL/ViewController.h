@@ -17,6 +17,7 @@
 @property (weak) IBOutlet NSImageView *myImage;
 @property (weak) IBOutlet NSTextField *StatusLabel;
 @property (weak) IBOutlet NSButtonCell *DitherCheck;
+@property (weak) IBOutlet NSButton *ConnectButton;
 
 // Process a new file
 - (void)processFile:(NSString *)path;

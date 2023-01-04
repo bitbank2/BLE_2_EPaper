@@ -309,7 +309,7 @@ public class FirstFragment extends Fragment {
             if (deviceName == null) { // use the address
                 deviceName = device.toString();
             }
-            if(deviceName.startsWith("ESL_") && !listBluetoothDevice.contains(device)){
+            if((deviceName.startsWith("ESL_") || deviceName.startsWith("EPD_")) && !listBluetoothDevice.contains(device)){
                 listBluetoothDevice.add(device);
                 listBTName.add(deviceName);
                 binding.lelist.invalidateViews();

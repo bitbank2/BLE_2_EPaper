@@ -6,6 +6,7 @@
     <string name="second_fragment_label">Send Image Data</string>
     <string name="next">Next</string>
     <string name="openimage">Open Image</string>
+    <string name="clear">Clear</string>
     <string name="sendimage">Send Image</string>
     <string name="getweather">Get Weather</string>
     <string name="scan_for_esl_devices">Scan for ESL devices</string>

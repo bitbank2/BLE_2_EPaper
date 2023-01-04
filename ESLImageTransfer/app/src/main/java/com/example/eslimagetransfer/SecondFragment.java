@@ -60,6 +60,7 @@ public class SecondFragment extends Fragment {
     private BluetoothGattCharacteristic mCharacteristic = null;
     private volatile boolean bConnected = false;
     private static boolean bBitmapLoaded = false;
+    private static boolean bSendImage = true; // false = clear, true = image
     private static final UUID ESL_SERVICE_UUID = UUID.fromString("13187b10-eba9-a3ba-044e-83d3217d9a38");
     private static final UUID ESL_CHARACTERISTIC_UUID = UUID.fromString("4b646063-6264-f3a7-8941-e65356ea82fe");
     // Request code for selecting an image file.
@@ -164,6 +165,7 @@ public class SecondFragment extends Fragment {
 
         mHandler = new Handler();
         binding.buttonOpen.setEnabled(true);
+        binding.buttonClear.setEnabled(true);
 
         binding.buttonWeather.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -180,6 +182,28 @@ public class SecondFragment extends Fragment {
                     }
                 });
                 thread.start();
+            }
+        });
+
+        binding.buttonClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                bSendImage = false; // tell final step to clear display
+                Toast.makeText(localContext,
+                        "Connecting to ESL...",
+                        Toast.LENGTH_LONG).show();
+                if (connectGatt(FirstFragment.eslDevice.getAddress())) {
+                    mBluetoothGatt.discoverServices();
+                    Toast.makeText(localContext,
+                            "Connected!",
+                            Toast.LENGTH_LONG).show();
+                    bConnected = true;
+                } else {
+                    Toast.makeText(localContext,
+                            "Connection failed!",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
             }
         });
 
@@ -318,6 +342,13 @@ public class SecondFragment extends Fragment {
         }
     }
 
+    private void clearImage() {
+        byte[] command = {0x00};
+        mCharacteristic.setValue(command);
+        mCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+        mBluetoothGatt.writeCharacteristic(mCharacteristic);
+    } /* clearImage() */
+
     private void sendImage() {
         // Try sending a blank screen command
         byte[] setBytePos = {0x02, 0x00, 0x00};
@@ -427,12 +458,16 @@ public class SecondFragment extends Fragment {
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                sendImage();
+                                if (bSendImage)
+                                    sendImage();
+                                else
+                                    clearImage();
                                 // shut down this fragment's activity until we re-scan + re-connect
                                 mBluetoothGatt.disconnect();
                                 mBluetoothGatt.close();
                                 binding.buttonSecond.setEnabled(false);
                                 binding.buttonOpen.setEnabled(false);
+                                binding.buttonClear.setEnabled(false);
                             }
                         });
                     }

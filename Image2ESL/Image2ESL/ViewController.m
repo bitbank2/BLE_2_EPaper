@@ -13,10 +13,18 @@
 G4ENCIMAGE g4;
 // max compressed data size
 #define OUTBUFFER_SIZE 65536
-#define DATA_UNCOMPRESSED 3
-#define DATA_CCITTG4 4
-#define DATA_PCX 5
-#define DATA_PNG 6
+// BLE command bytes (1st byte of each packet)
+enum {
+        BLE_CMD_CLEAR=0,
+        BLE_CMD_UNCOMPRESSED,
+        BLE_CMD_G4,
+        BLE_CMD_PCX,
+        BLE_CMD_PNG,
+        BLE_CMD_GFX_CMDS,
+        BLE_CMD_COUNT
+};
+#define BLE_FIRST_PACKET 0x40
+#define BLE_LAST_PACKET 0x80
 
 MyBLE *BLEClass;
 uint8_t contrast_lookup[256];
@@ -45,12 +53,13 @@ const char *szPanelNames[] = {  "EPD42_400x300", // WFT0420CZ15
   "EPD579_792x272", // GDEY0579T93
   "EPD583R_600x448",
   "EPD74R_640x384",
+  "EPD35Y_184x384", // Hanshow Nebular black/white/yellow (#22)
 };
-const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
-const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
+const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3,3};
+const uint8_t u8IsRotated[] =   {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,1};
 
-const int iPanelWidths[] = {400, 296, 296, 296, 296, 400, 400, 212, 212, 212, 212, 250, 250, 152, 152, 200, 264, 264, 296, 792, 600, 640};
-const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 104, 122, 122, 152, 152, 200, 176, 176, 152, 272, 448, 384};
+const int iPanelWidths[] = {400, 296, 296, 296, 296, 400, 400, 212, 212, 212, 212, 250, 250, 152, 152, 200, 264, 264, 296, 792, 600, 640, 384};
+const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 104, 122, 122, 152, 152, 200, 176, 176, 152, 272, 448, 384, 184};
 
 @implementation ViewController
 
@@ -64,7 +73,7 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     
 //    _myview.frame = NSMakeRect(0, 0, self.view.frame.size.width, self.view.frame.size.height);
     
-    [_myview initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
+    DragDropView *ddv = [_myview initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)]; // don't need to save the pointer to the view
     // Do any additional setup after loading the view.
     BLEClass = [[MyBLE alloc] init];
     
@@ -91,17 +100,20 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 - (IBAction)FeedPushed:(NSButton *)sender {
     NSLog(@"Erase!");
     uint8_t ucTemp[4];
-    ucTemp[0] = 0x00; // erase memory
+    ucTemp[0] = BLE_CMD_CLEAR; // erase memory
     ucTemp[1] = 0xff; // to white
-    [BLEClass writeData:ucTemp withLength:2 withResponse:NO];
-    [NSThread sleepForTimeInterval: 0.01];
-    ucTemp[0] = 0x01; // send memory image to EPD
-    [BLEClass writeData:ucTemp withLength:1 withResponse:NO];
+    [BLEClass writeData:ucTemp withLength:2 withResponse:YES];
+//    [NSThread sleepForTimeInterval: 0.01];
+//    ucTemp[0] = BLE_CMD_DISPLAY; // send memory image to EPD
+//    [BLEClass writeData:ucTemp withLength:1 withResponse:YES];
 }
 - (IBAction)ConnectPushed:(NSButton *)sender {
-    NSLog(@"Connect!");
     if (![BLEClass isConnected]) {
+        NSLog(@"Connect!");
         [BLEClass startScan];
+    } else {
+        NSLog(@"Disconnect!");
+        [BLEClass disconnect];
     }
 }
 
@@ -307,12 +319,11 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 - (void) getRotatedLine:(uint8_t *)s current_x:(int)x destination:(uint8_t *)d
 {
     uint8_t uc ,ucSrcMask, ucDestMask;
-    int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     int y;
     ucSrcMask = (0x80 >> (x & 7));
     uc = 0xff;
     ucDestMask = 0x80;
-    for (y=0; y<iHeight*iHeightMult; y++) { // form the bytes of each line
+    for (y=0; y<iHeight; y++) { // form the bytes of each line
         if (s[0] & ucSrcMask)
             uc &= ~ucDestMask;
         ucDestMask >>= 1;
@@ -333,7 +344,7 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     uint8_t *s, ucTemp[256];
     int iPitch, rc;
     if (u8IsRotated[BLEClass.iPanelType]) { // rotated 90
-        rc = G4ENC_init(&g4, iHeight*iHeightMult, iWidth, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
+        rc = G4ENC_init(&g4, iHeight, iWidth*iHeightMult, G4ENC_MSB_FIRST, NULL, pDest, OUTBUFFER_SIZE);
         if (rc == G4ENC_SUCCESS) {
             for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
                 // rotate the image 90
@@ -341,6 +352,18 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
                 [self getRotatedLine: s current_x:x destination:ucTemp];
                 rc = G4ENC_addLine(&g4, ucTemp);
             } // for each line of image
+            if (iHeightMult == 2) { // add second plane
+                for (x=iWidth-1; x>=0 && rc == G4ENC_SUCCESS; x--) {
+                    // rotate the image 90
+                    s = &pSource[(x >> 3) + (((iWidth+7)/8)*iHeight)];
+                    [self getRotatedLine: s current_x:x destination:ucTemp];
+                    // invert it for red/yellow plane
+                    for (int i=0; i<(iHeight+7)/8; i++) {
+                        ucTemp[i] = ~ucTemp[i];
+                    }
+                    rc = G4ENC_addLine(&g4, ucTemp);
+                } // for each line of image
+            }
         } // successful init
     } else { // not rotated
         iPitch = (iWidth+7)>>3;
@@ -471,45 +494,58 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 } /* compressPCX() */
 
 //
-// Send compressed image data in MTUs up to 200 bytes each
+// Send image data over BLE
 //
-- (int)sendCompressed:(uint8_t *)pData type:(uint8_t)u8Type size:(int)iSize
+- (int)sendData:(uint8_t *)pData type:(uint8_t)u8Type size:(int)iSize
 {
-    uint8_t ucTemp[256];
+    uint8_t ucTemp[512];
     int x, y, iLen, iSent = 0;
+    int iBlock, iPayloadSize, iBlockCount;
+    float fDelay = 0.040; // seconds
     
-    ucTemp[0] = u8Type; // image data type
+    iPayloadSize = BLEClass.iMTUSize - 1;
+    iBlockCount = (iSize + iPayloadSize -1) / iPayloadSize;
+    if (u8Type == BLE_CMD_G4)
+        fDelay = 0.1; // give more time for destination to decode the dat
+    
     x = iSize;
     y = 0;
-    while (x) { // send in relatively large blocks
-        iLen = 199;
+    for (iBlock=0; iBlock<iBlockCount; iBlock++) { // send in relatively large blocks
+        iLen = iPayloadSize; // send the maximum amount of data per packet for the most efficient transfer
         if (iLen > x) iLen = x;
         memcpy(&ucTemp[1], &pData[y], iLen); // send up to 200 bytes total per write
-        [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
+        ucTemp[0] = u8Type; // image data type
+        if (iBlock == 0)
+            ucTemp[0] |= BLE_FIRST_PACKET; // first data block
+        if (iBlock == iBlockCount-1) // could be a single block with both flags
+            ucTemp[0] |= BLE_LAST_PACKET; // last data block
+       [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
+        [NSThread sleepForTimeInterval: fDelay]; // allow receiver time to process the data
         iSent += iLen+1;
         x -= iLen;
         y += iLen;
     }
     return iSent;
-} /* sendCompressed() */
+} /* sendData() */
 
 //
 // Send the image to the connected ESL
 //
 - (void)sendImage
 {
-    uint8_t *s, *d, ucTemp[256]; // holds each packet to send
+    uint8_t *s, *d;
     int x, y, iSent, iTotal, iG4Total, iPCXTotal;
-    uint8_t *pG4Out, *pPCXOut;
+    uint8_t *pG4Out, *pPCXOut, *pOut;
     int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     int iPitch;
     if (pDithered == NULL) return; // no image to send
     if (u8IsRotated[BLEClass.iPanelType]) {
         iPitch = ((iHeight*iHeightMult)+7)/8;
+        iTotal = iPitch * iWidth;
     } else {
         iPitch = (iWidth+7)/8;
+        iTotal = iPitch * iHeight * iHeightMult;
     }
-    iTotal = ((iWidth + 7)>>3) * iHeight*iHeightMult;
     pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
     pG4Out = malloc(OUTBUFFER_SIZE);
     NSLog(@"Uncompressed size = %d", iTotal);
@@ -519,57 +555,34 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     iG4Total = [self compressG4:pDithered dest:pG4Out];
     NSLog(@"G4 compressed size = %d", iG4Total);
     // Now send it to the ESL
-    ucTemp[0] = 0x02; // set byte pos
-    ucTemp[1] = ucTemp[2] = 0; // start of image
-    [BLEClass writeData:ucTemp withLength:3 withResponse:YES];
-//    [NSThread sleepForTimeInterval: 0.01];
     if (iG4Total < iTotal && iG4Total < iPCXTotal) { // G4 beat uncompressed and PCX
-        iSent = [self sendCompressed:pG4Out type:DATA_CCITTG4 size:iG4Total];
-    } else if (iPCXTotal < iG4Total && iPCXTotal < iTotal) { // PCX beat uncompressed and G4
-        iSent = [self sendCompressed:pPCXOut type:DATA_PCX size:iPCXTotal];
+        iSent = [self sendData:pG4Out type:BLE_CMD_G4 size:iG4Total];
+    } else if (iPCXTotal < iTotal) { // PCX beat uncompressed and G4
+        iSent = [self sendData:pPCXOut type:BLE_CMD_PCX size:iPCXTotal];
     } else { // send uncompressed
-        // transmit the uncompressed data rotated since the memory is laid out 90 degrees clockwise rotated
+        // transmit the uncompressed data in the destination EPD format to be written directly on arrival
+        // first prepare the uncompressed data in a single block
         iSent = 0;
-        ucTemp[0] = DATA_UNCOMPRESSED; // uncompressed image data
-        d = &ucTemp[1];
+        pOut = malloc(iTotal);
         if (u8IsRotated[BLEClass.iPanelType]) {
             for (x=iWidth-1; x>=0; x--) {
                 s = &pDithered[x>>3];
-                [self getRotatedLine: s current_x:x destination: d];
-                d += iPitch;
-                if (d - ucTemp >= 200) {
-                    [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-                    iSent += (int)(d-ucTemp);
-                    d = &ucTemp[1];
-                }
-                if ((x & 0x3f) == 0) {
-                    [NSThread sleepForTimeInterval: 0.100]; // add a small sleep otherwise the BLE data gets 'stuck' in limbo
-                }
+                [self getRotatedLine: s current_x:x destination: &pOut[iSent]];
+                iSent += iPitch;
             } // for x
         } else { // not rotated
+            d = pOut;
             for (y=0; y<iHeight*iHeightMult; y++) {
                 s = &pDithered[y*iPitch];
                 for (int i=0; i<iPitch; i++) {
                     *d++ = ~s[i]; // invert for e-paper
                 }
-                if (d - ucTemp >= 200) {
-                    [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-                    iSent += (int)(d-ucTemp);
-                    d = &ucTemp[1];
-                }
-                if ((y & 0x3f) == 0) {
-                    [NSThread sleepForTimeInterval: 0.100]; // add a small sleep otherwise the BLE data gets 'stuck' in limbo
-                }
             } // for y
         } // not rotated
-        if (d-ucTemp > 1) { // send the last block
-            [BLEClass writeData:ucTemp withLength:(int)(d-ucTemp) withResponse:YES];
-            iSent += (int)(d-ucTemp);
-        }
+        iSent = [self sendData:pOut type:BLE_CMD_UNCOMPRESSED size:iTotal];
+        free(pOut);
     } // uncompressed
-    ucTemp[0] = 0x01; // display the new image data
-    [BLEClass writeData:ucTemp withLength:1 withResponse:YES];
-    NSLog(@"Total bytes sent over BLE = %d", iSent+1);
+    NSLog(@"Total bytes sent over BLE = %d", iSent);
     // Free local compressed data buffers
     free(pPCXOut);
     free(pG4Out);
@@ -579,8 +592,10 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 {
     if ([BLEClass isConnected]) {
         _StatusLabel.stringValue = [NSString stringWithFormat:@"Connected to: %@, %d x %d, %s", [BLEClass getName], iPanelWidths[BLEClass.iPanelType], iPanelHeights[BLEClass.iPanelType], (u8PanelColors[BLEClass.iPanelType] == 2) ? "BW": "BWR"];
+        _ConnectButton.title = @"Disconnect";
     } else {
         _StatusLabel.stringValue = @"Disconnected";
+        _ConnectButton.title = @"Connect";
     }
 } /* statusChanged */
 

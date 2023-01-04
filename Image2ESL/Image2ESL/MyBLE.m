@@ -65,6 +65,8 @@ static NSString *ESLChar = @"4b646063-6264-f3a7-8941-e65356ea82fe";
                 NSLog(@"Manufacturer data: len=%d, data=0x%02x", len, p[0]);
             } else {
                 NSLog(@"Invalid or missing manufacturer data");
+                // assume old hacked Hanshow device
+                _iPanelType = 11; // 122x250 BW
             }
         }
     }
@@ -74,7 +76,7 @@ static NSString *ESLChar = @"4b646063-6264-f3a7-8941-e65356ea82fe";
 - (void) centralManager: (CBCentralManager *)central
    didConnectPeripheral: (CBPeripheral *)aPeripheral
 {
-    [aPeripheral setDelegate:self];
+    [aPeripheral setDelegate: self];
     [aPeripheral discoverServices:nil];
 }
 
@@ -110,6 +112,11 @@ didDisconnectPeripheral: (CBPeripheral *)aPeripheral
                                                         object:self userInfo:nil];
 
 }
+- (void) disconnect
+{
+    [_centralManager cancelPeripheralConnection:_myPeripheral];
+} /* disconnect() */
+
 //------------------------------------------------------------------------------
 /// Invoked whenever the central manager fails to create a connection with the peripheral.
 - (void) centralManager: (CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)aPeripheral
@@ -168,6 +175,8 @@ didDiscoverServices:(NSError *)error
         _bConnected = YES; // indicates that we're ready to send data
             [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusChangedNotification"
                                                                 object:self userInfo:nil];
+            self.iMTUSize = (int)[self.myPeripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse]; // hold this for later
+            NSLog(@"Maximum MTU size is %d\n", self.iMTUSize);
         }
     }
 }
