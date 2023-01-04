@@ -12,18 +12,20 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #endif
-#else
+#elif !defined(HAL_ESP32_HAL_H_)
 #include <ArduinoBLE.h>
 #endif
 #include <TIFF_G4.h>
-static uint8_t ucImage[(640*480)/4];
+//static uint8_t ucImage[(640*480)/4];
 static TIFFG4 g4;
 //static BLEDevice peripheral;
 #ifdef HAS_BLE
-static uint8_t ucBuffer[512]; // receive buffer for this characteristic
-static uint8_t ucCompressed[65536];
-static uint8_t ucLastCommand;
-static int iOffset, iWidthMult, iHeightMult;
+static int iHead, iTail, epd_buffer_size;
+static uint8_t epd_temp[512*2]; // receive buffer for this characteristic (max 2 * MTU)
+static uint8_t ucBuffer[512]; // receive buffer
+//static uint8_t ucCompressed[65536];
+//static uint8_t ucLastCommand;
+static int iTotal, iWidthMult, iHeightMult;
 #ifdef HAL_ESP32_HAL_H_
 static BLEUUID tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38");
 static BLEUUID tiffCharacteristic ("4b646063-6264-f3a7-8941-e65356ea82fe");
@@ -40,14 +42,16 @@ BLECharacteristic tiffCharacteristic("4b646063-6264-f3a7-8941-e65356ea82fe", BLE
 // command bytes
 enum {
   EPD_ERASE=0,
-  EPD_DISPLAY,
-  EPD_SETOFFSET,
-  EPD_DATA,
-  EPD_G4_DATA,
-  EPD_PCX_DATA,
-  EPD_PNG_DATA,
+  EPD_UNCOMPRESSED,
+  EPD_G4,
+  EPD_PCX,
+  EPD_PNG,
+  EPD_GFX_CMDS,
   EPD_COUNT
 };
+#define EPD_CMD_MASK 0x3f
+#define EPD_FIRST_PACKET 0x40
+#define EPD_LAST_PACKET 0x80
 #endif // BLE support
 
 ONE_BIT_DISPLAY oled, epd;
@@ -130,41 +134,89 @@ const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
 
 #ifdef HAS_BLE
 
+void  epd_decode_pcx(uint8_t *pBuf, int *pTail, int *pHead, uint8_t u8Cmd)
+{
+uint8_t uc, *s, *pEnd;
+int i;
+
+    u8Cmd &= EPD_LAST_PACKET;
+    s = &pBuf[*pTail];
+    pEnd = &pBuf[*pHead];
+    if (!u8Cmd) { // if not the last packet, we may be missing a repeating byte pair
+       pEnd -= 2;
+    }
+    while (s < pEnd) {
+        uc = *s++;
+        if (uc >= 0xc0) { // repeating byte
+          uc &= 0x3f; // repeat count
+          for (i=0; i<uc; i++) {
+              epd.pushPixels(&s[0], 1);
+              iTotal++;
+              if (iTotal == epd_buffer_size && u8PanelColors[iPanel] == 3) {
+               //   EPD_WriteCmd(0x13); // start of next memory plane
+              }
+          } // for i
+          s++;
+        } else {
+          epd.pushPixels(&uc, 1); // just write it
+          iTotal++;
+          if (iTotal == epd_buffer_size && u8PanelColors[iPanel] == 3) {
+           //   EPD_WriteCmd(0x13); // start of next memory plane
+          }
+        }
+    } // while decoding
+    *pTail = (int)(s - pBuf); // update tail pointer
+} /* epd_decode_pcx() */
+
 // Receives BLE data writes
 void myDataWrite(uint8_t *pData, int iLen) {
-        switch (pData[0]) { // first byte is the command
+        if (pData[0] & EPD_FIRST_PACKET) {
+          int cx, cy;
+          if (epd.getRotation() == 0) {
+            cx = epd.width();
+            cy = epd.height();
+          } else {
+            cx = epd.height();
+            cy = epd.width();
+          }
+          epd.setTextColor(OBD_BLACK, OBD_WHITE); // first EPD plane to write
+          epd.setPosition(0,0,cx, cy); // get ready to write data
+          epd_buffer_size = epd.height() * (epd.width() + 7)/8;
+          //oled.println("First packet");
+          iHead = iTail = iTotal = 0;
+        }
+        switch (pData[0] & EPD_CMD_MASK) { // first byte is the command
           case EPD_ERASE: // erase the display
-            memset(ucCompressed, pData[1], sizeof(ucCompressed));
-            break;
-          case EPD_DISPLAY: // display the image
-            if (iOffset > 0) {
-              oled.print("Data size: ");
-              oled.println(iOffset, DEC);
-            }
-            iWidthMult = iHeightMult = 1;
-            if (u8IsRotated[iPanel])
-              iWidthMult = (u8PanelColors[iPanel] == 2) ? 1:2; // double the height for BWR images
-            else
-              iHeightMult = (u8PanelColors[iPanel] == 2) ? 1:2; 
-            UnpackBuffer(ucLastCommand); // correct the pixel direction or decode the compressed data
+            epd.fillScreen(OBD_WHITE);
             epd.display();
             break;
-          case EPD_SETOFFSET: // set output offset
-            iOffset = pData[1] | (pData[2] << 8);
+          case EPD_UNCOMPRESSED: // image data
+             epd.pushPixels(&pData[1], iLen-1); // write it straight into the e-paper panel RAM
+             break;
+          case EPD_G4:
+              if (pData[0] & EPD_FIRST_PACKET) {
+                  g4.decodeIncBegin(epd.width(), epd.height()*(u8PanelColors[iPanel]-1), BITDIR_MSB_FIRST, TIFFDraw);
+              }
+              g4.addData(&pData[1], iLen-1);
+              g4.decodeInc(!(pData[0] & EPD_LAST_PACKET)); // try to decode a group of lines with the data available
+             break;
+          case EPD_PCX:
+              if (iHead != iTail) { // move down existing data
+                  memmove(epd_temp, &epd_temp[iTail], (iHead-iTail));
+                  iHead -= iTail;
+                  iTail = 0;
+              } else {
+                  iHead = iTail = 0; // if we used all data before, reset to 0
+              }
+              memcpy(&epd_temp[iHead], &pData[1], iLen-1);
+              iHead += (iLen-1);
+              epd_decode_pcx(epd_temp, &iTail, &iHead, pData[0]);
             break;
-          case EPD_DATA: // image data
-          case EPD_G4_DATA:
-          case EPD_PCX_DATA:
-          case EPD_PNG_DATA:
-            memcpy(&ucCompressed[iOffset], &pData[1], iLen-1);
-            iOffset += (iLen-1);
-           // oled.setCursor(0,56);
-           // oled.print("size: ");
-           // oled.println(iOffset, DEC);
-            break;
+        } /* switch on command */
+        if (pData[0] & EPD_LAST_PACKET) {
+             epd.display();
         }
-        ucLastCommand = pData[0];
-}
+} /* myDataWrite() */
 
 #ifdef HAL_ESP32_HAL_H_
 
@@ -199,15 +251,22 @@ class CharacteristicCallbacks: public BLECharacteristicCallbacks {
 void TIFFDraw(TIFFDRAW *pDraw)
 {
   int iPitch = ((pDraw->iWidth+7)>>3);
-  memcpy(&ucImage[pDraw->y * iPitch], pDraw->pPixels, iPitch);
+  if (pDraw->y == epd.height() && u8PanelColors[iPanel] == 3) {
+        epd.setTextColor(OBD_RED, OBD_WHITE); // activate the second memory plane on BWR/BWY EPDs
+        epd.setPosition(0,0, epd.width(), epd.height());
+  }
+// write the data straight into the EPD display buffer
+// since it has been formatted+oriented that way at the source
+  epd.pushPixels(pDraw->pPixels, iPitch);
 } /* TIFFDraw() */
 
+#ifdef NOT_USED
 void UnpackBuffer(uint8_t ucLastCommand)
 {
 int iWidth = epd.width();
 int iHeight = epd.height();
 uint8_t  uc, *s, *d, ucMask, ucSrcMask;
-  if (ucLastCommand == EPD_G4_DATA) { // it's CCITT G4
+  if (ucLastCommand == EPD_G4) { // it's CCITT G4
     if (g4.openRAW(iWidth*iWidthMult, iHeight*iHeightMult, BITDIR_MSB_FIRST, ucCompressed, iOffset, TIFFDraw))
     {
       g4.setDrawParameters(1.0f, TIFF_PIXEL_1BPP, 0, 0, iWidth*iWidthMult, iHeight*iHeightMult, NULL);
@@ -222,7 +281,7 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
       g4.close();
       memcpy(ucCompressed, ucImage, (((iWidth*iWidthMult)+7)>> 3) * iHeight*iHeightMult); // copy back to original buffer to be rotated
     }
-  } else if (ucLastCommand == EPD_PCX_DATA) { // PCX run-length compressed
+  } else if (ucLastCommand == EPD_PCX) { // PCX run-length compressed
     uint8_t *pEnd = ucCompressed + iOffset; // end of data
     s = ucCompressed;
       oled.println("PCX");
@@ -269,10 +328,10 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
     }
   } // for y
 } /* UnpackBuffer() */
+#endif // NOT_USED
 
 void BLETest(void)
 {
-  ucLastCommand = EPD_COUNT;
   epdBegin();
   oled.fillScreen(OBD_WHITE);
   oled.setFont(FONT_12x16);
@@ -378,7 +437,8 @@ void epdBegin()
   }
   epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
   epd.SPIbegin(iPanel + EPD42_400x300, 4000000); // initalize library for this panel
-  epd.setBuffer(ucImage);
+//  epd.allocBuffer();
+ // epd.setBuffer(ucImage);
 } /* epdBegin() */
 
 void ShowInfo(void)
@@ -409,14 +469,28 @@ void EPDTest(void)
   oled.println("EPD Test");
   oled.println("Starting...");
   epdBegin();
-  if (epd.width() < epd.height())
-     epd.setRotation(90);
+  if (epd.width() < epd.height() || !epd.getBuffer()) {
+       epd.setRotation(90);
+  }
+  
   epd.fillScreen(OBD_WHITE);
   epd.setFont(FONT_12x16);
   epd.setTextColor(OBD_BLACK, OBD_WHITE);
-  epd.println("Black text");
-  epd.setTextColor(OBD_RED, OBD_WHITE);
-  epd.println("Red text");
+  epd.println("EPD Test");
+  epd.print("Panel size: ");
+  epd.print(epd.width(), DEC);
+  epd.print(" x ");
+  epd.println(epd.height(), DEC);
+  if (epd.getBuffer())
+     epd.println("With backbuffer");
+  else
+     epd.println("No backbuffer (0 RAM)");
+  if (u8PanelColors[iPanel] == 2)
+    epd.println("Two colors (Black/White)");
+  else {
+    epd.setTextColor(OBD_RED, OBD_WHITE);
+    epd.println("Three colors (B/W/R)");
+  }
   epd.display();
 } /* EPDTest() */
 
@@ -427,6 +501,7 @@ void EPDClear(void)
   oled.println("Clear EPD");
   oled.println("Starting...");
   epdBegin();
+  epd.fillScreen(OBD_WHITE);
   epd.display(); // display the white buffer and return
 } /* EPDClear() */
 
