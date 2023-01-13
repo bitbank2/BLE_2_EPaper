@@ -51,7 +51,7 @@ static NSString *ESLChar = @"4b646063-6264-f3a7-8941-e65356ea82fe";
     if( deviceName) // && ![self.discoveredPeripherals containsObject:aPeripheral])
     {
         // check if it's one of the supported name
-        if (memcmp(deviceName, "ESL", 3) == 0 || memcmp(deviceName, "EPD_Tester", 10) == 0) {
+        if (memcmp(deviceName, "ESL", 3) == 0 || memcmp(deviceName, "EPD_", 4) == 0) {
             printf("Found a supported e-ink label: %s, connecting...\n", deviceName);
             [peripherals addObject:aPeripheral];
             [self.discoveredPeripherals addObject:aPeripheral];

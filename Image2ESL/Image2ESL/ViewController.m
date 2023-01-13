@@ -9,8 +9,10 @@
 #import "ViewController.h"
 #import "MyBLE.h"
 #include "G4ENCODER.h"
-
+#include "PNGenc.h"
 G4ENCIMAGE g4;
+PNGIMAGE png;
+
 // max compressed data size
 #define OUTBUFFER_SIZE 65536
 // BLE command bytes (1st byte of each packet)
@@ -97,6 +99,10 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 
     // Update the view, if already loaded.
 }
+- (IBAction)DitherPushed:(NSButton *)sender {
+    [self ditherFile:nil];
+}
+
 - (IBAction)FeedPushed:(NSButton *)sender {
     NSLog(@"Erase!");
     uint8_t ucTemp[4];
@@ -313,6 +319,22 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
             *d++ = ~cOut; // store partial byte
         } // for y
     }
+    {
+        uint8_t *pG4Out, *pPCXOut, *pPNGOut;
+        int iPCXTotal, iG4Total, iPNGTotal;
+        pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
+        pG4Out = malloc(OUTBUFFER_SIZE);
+        pPNGOut = malloc(OUTBUFFER_SIZE);
+        // compare the compressed data size
+        iPCXTotal = [self compressPCX:pDest dest:pPCXOut];
+        iG4Total = [self compressG4:pDest dest:pG4Out];
+        iPNGTotal = [self compressPNG:pDest dest:pPNGOut];
+        sprintf((char *)ucTemp, "Uncomp: %d, PCX: %d, G4: %d, PNG: %d", iHeight * iDestPitch * (u8PanelColors[BLEClass.iPanelType] -1), iPCXTotal, iG4Total, iPNGTotal);
+        _InfoLabel.stringValue = [NSString stringWithFormat:@"%s", (char *)ucTemp];
+        free(pPCXOut);
+        free(pG4Out);
+        free(pPNGOut);
+    }
     return pDest;
 } /* DitherImage */
 
@@ -336,6 +358,51 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     } // for y
     *d++ = uc; // store last partial byte
 } /* getRotatedLine() */
+
+// Compress an image using PNG encoding
+- (int)compressPNG:(uint8_t *)pSource dest:(uint8_t *)pDest
+{
+    int x, y, iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
+    uint8_t *s, ucTemp[256];
+    int iPitch, rc;
+    rc = PNG_openRAM(&png, pDest, OUTBUFFER_SIZE);
+    if (u8IsRotated[BLEClass.iPanelType]) { // rotated 90
+        rc = PNG_encodeBegin(&png, iHeight, iWidth* iHeightMult, PNG_PIXEL_GRAYSCALE, 1, NULL, 9);
+        if (rc == PNG_SUCCESS) {
+            for (x=iWidth-1; x>=0 && rc == PNG_SUCCESS; x--) {
+                // rotate the image 90
+                s = &pSource[x >> 3];
+                [self getRotatedLine: s current_x:x destination:ucTemp];
+                rc = PNG_addLine(&png, ucTemp, iWidth-1-x);
+            } // for each line of image
+            if (iHeightMult == 2) { // add second plane
+                for (x=iWidth-1; x>=0 && rc == PNG_SUCCESS; x--) {
+                    // rotate the image 90
+                    s = &pSource[(x >> 3) + (((iWidth+7)/8)*iHeight)];
+                    [self getRotatedLine: s current_x:x destination:ucTemp];
+                    // invert it for red/yellow plane
+                    for (int i=0; i<(iHeight+7)/8; i++) {
+                        ucTemp[i] = ~ucTemp[i];
+                    }
+                    rc = PNG_addLine(&png, ucTemp, (iWidth*2)-1-x);
+                } // for each line of image
+            }
+        } // successful init
+    } else { // not rotated
+        iPitch = (iWidth+7)>>3;
+        rc = PNG_encodeBegin(&png, iWidth, iHeight*iHeightMult, PNG_PIXEL_GRAYSCALE, 1, NULL, 9);
+        if (rc == PNG_SUCCESS) {
+            for (y=0; y<iHeight*iHeightMult && rc == PNG_SUCCESS; y++) {
+                s = &pSource[y*iPitch];
+                for (int i=0; i<iPitch; i++) {
+                    ucTemp[i] = ~s[i]; // invert the pixels
+                }
+                rc = PNG_addLine(&png, ucTemp, y);
+            } // for each line of image
+        } // successful init
+    }
+    return PNG_close(&png);
+} /* compressPNG() */
 
 // Compress an image using CCITT G4 encoding
 - (int)compressG4:(uint8_t *)pSource dest:(uint8_t *)pDest
@@ -501,11 +568,11 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     uint8_t ucTemp[512];
     int x, y, iLen, iSent = 0;
     int iBlock, iPayloadSize, iBlockCount;
-    float fDelay = 0.040; // seconds
+    float fDelay = 0.0750; // seconds
     
     iPayloadSize = BLEClass.iMTUSize - 1;
     iBlockCount = (iSize + iPayloadSize -1) / iPayloadSize;
-    if (u8Type == BLE_CMD_G4)
+    if (u8Type != BLE_CMD_UNCOMPRESSED)
         fDelay = 0.1; // give more time for destination to decode the dat
     
     x = iSize;

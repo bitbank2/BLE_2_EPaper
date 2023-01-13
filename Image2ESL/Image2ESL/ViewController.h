@@ -16,6 +16,7 @@
 @property (nonatomic) NSString *filename;
 @property (weak) IBOutlet NSImageView *myImage;
 @property (weak) IBOutlet NSTextField *StatusLabel;
+@property (weak) IBOutlet NSTextField *InfoLabel;
 @property (weak) IBOutlet NSButtonCell *DitherCheck;
 @property (weak) IBOutlet NSButton *ConnectButton;
 

@@ -14,8 +14,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "122"
-            endingLineNumber = "122"
+            startingLineNumber = "128"
+            endingLineNumber = "128"
             landmarkName = "-TransmitPushed:"
             landmarkType = "7">
          </BreakpointContent>
@@ -78,8 +78,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "191"
-            endingLineNumber = "191"
+            startingLineNumber = "197"
+            endingLineNumber = "197"
             landmarkName = "-DitherImage:width:height:pitch:dither:"
             landmarkType = "7">
          </BreakpointContent>
@@ -94,8 +94,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "76"
-            endingLineNumber = "76"
+            startingLineNumber = "78"
+            endingLineNumber = "78"
             landmarkName = "-viewDidLayout"
             landmarkType = "7">
          </BreakpointContent>
@@ -126,8 +126,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "622"
-            endingLineNumber = "622"
+            startingLineNumber = "689"
+            endingLineNumber = "689"
             landmarkName = "-ditherFile:"
             landmarkType = "7">
          </BreakpointContent>
@@ -142,8 +142,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "704"
-            endingLineNumber = "704"
+            startingLineNumber = "771"
+            endingLineNumber = "771"
             landmarkName = "-ditherFile:"
             landmarkType = "7">
          </BreakpointContent>
@@ -158,8 +158,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "202"
-            endingLineNumber = "202"
+            startingLineNumber = "208"
+            endingLineNumber = "208"
             landmarkName = "-DitherImage:width:height:pitch:dither:"
             landmarkType = "7">
          </BreakpointContent>
@@ -174,8 +174,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "553"
-            endingLineNumber = "553"
+            startingLineNumber = "620"
+            endingLineNumber = "620"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -190,8 +190,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "450"
-            endingLineNumber = "450"
+            startingLineNumber = "517"
+            endingLineNumber = "517"
             landmarkName = "-compressPCX:dest:"
             landmarkType = "7">
          </BreakpointContent>
@@ -206,8 +206,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "524"
-            endingLineNumber = "524"
+            startingLineNumber = "591"
+            endingLineNumber = "591"
             landmarkName = "-sendData:type:size:"
             landmarkType = "7">
          </BreakpointContent>
@@ -318,8 +318,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "507"
-            endingLineNumber = "507"
+            startingLineNumber = "574"
+            endingLineNumber = "574"
             landmarkName = "-sendData:type:size:"
             landmarkType = "7">
          </BreakpointContent>
@@ -334,8 +334,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "565"
-            endingLineNumber = "565"
+            startingLineNumber = "632"
+            endingLineNumber = "632"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -350,8 +350,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "583"
-            endingLineNumber = "583"
+            startingLineNumber = "650"
+            endingLineNumber = "650"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -366,8 +366,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "542"
-            endingLineNumber = "542"
+            startingLineNumber = "609"
+            endingLineNumber = "609"
             landmarkName = "-sendImage"
             landmarkType = "7">
          </BreakpointContent>
@@ -382,8 +382,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "516"
-            endingLineNumber = "516"
+            startingLineNumber = "583"
+            endingLineNumber = "583"
             landmarkName = "-sendData:type:size:"
             landmarkType = "7">
          </BreakpointContent>
@@ -398,8 +398,8 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "521"
-            endingLineNumber = "521"
+            startingLineNumber = "588"
+            endingLineNumber = "588"
             landmarkName = "-sendData:type:size:"
             landmarkType = "7">
          </BreakpointContent>
@@ -414,10 +414,362 @@
             filePath = "Image2ESL/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "558"
-            endingLineNumber = "558"
+            startingLineNumber = "625"
+            endingLineNumber = "625"
             landmarkName = "-sendImage"
             landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1912083D-F37D-466A-8F3A-C79B6ABE7FFC"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "368"
+            endingLineNumber = "368"
+            landmarkName = "-compressPNG:dest:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "CF92647A-1556-4279-9874-CD507ABF8687"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "376"
+            endingLineNumber = "376"
+            landmarkName = "-compressPNG:dest:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6394D6BE-BCDA-4D37-8E27-10143A75F771"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "378"
+            endingLineNumber = "378"
+            landmarkName = "-compressPNG:dest:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "EFDEB256-2654-4A46-815E-AF750664B284"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "310"
+            endingLineNumber = "310"
+            landmarkName = "PNG_addLine(pImage, pSrc, y)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "EFDEB256-2654-4A46-815E-AF750664B284 - 7704e83f50ee3eba"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine(png_image_tag*, unsigned char*, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "310"
+                  endingLineNumber = "310"
+                  offsetFromSymbolStart = "116">
+               </Location>
+               <Location
+                  uuid = "EFDEB256-2654-4A46-815E-AF750664B284 - 480b3a9d91681b0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "310"
+                  endingLineNumber = "310"
+                  offsetFromSymbolStart = "116">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "49578348-BF82-412D-8E44-513587DC7D69"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "586"
+            endingLineNumber = "586"
+            landmarkName = "PNGFindFilter(pCurr, pPrev, iPitch, iStride)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "49578348-BF82-412D-8E44-513587DC7D69 - 6d36233046cfcab9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNGFindFilter(unsigned char*, unsigned char*, int, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "583"
+                  endingLineNumber = "583"
+                  offsetFromSymbolStart = "1032">
+               </Location>
+               <Location
+                  uuid = "49578348-BF82-412D-8E44-513587DC7D69 - a6434f85162c2038"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNGFindFilter"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "583"
+                  endingLineNumber = "583"
+                  offsetFromSymbolStart = "1032">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6E13E4CC-3A90-47B5-A9A1-E5C5C886B3A3"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "589"
+            endingLineNumber = "589"
+            landmarkName = "PNGFindFilter(pCurr, pPrev, iPitch, iStride)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "6E13E4CC-3A90-47B5-A9A1-E5C5C886B3A3 - 6d36233046cfcd1c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNGFindFilter(unsigned char*, unsigned char*, int, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "586"
+                  endingLineNumber = "586"
+                  offsetFromSymbolStart = "1160">
+               </Location>
+               <Location
+                  uuid = "6E13E4CC-3A90-47B5-A9A1-E5C5C886B3A3 - a6434f85162c279d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNGFindFilter"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "586"
+                  endingLineNumber = "586"
+                  offsetFromSymbolStart = "1160">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5D5D05B8-68DA-4EF5-9F83-CE7EF955F428"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "325"
+            endingLineNumber = "325"
+            landmarkName = "PNG_addLine(pImage, pSrc, y)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "5D5D05B8-68DA-4EF5-9F83-CE7EF955F428 - 7704e83f50ee3ca9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine(png_image_tag*, unsigned char*, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "325"
+                  endingLineNumber = "325"
+                  offsetFromSymbolStart = "380">
+               </Location>
+               <Location
+                  uuid = "5D5D05B8-68DA-4EF5-9F83-CE7EF955F428 - 480b3a9d91683a3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "325"
+                  endingLineNumber = "325"
+                  offsetFromSymbolStart = "392">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "FD63D91C-48E9-423E-838F-76363A32DBB6"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "333"
+            endingLineNumber = "333"
+            landmarkName = "PNG_addLine(pImage, pSrc, y)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "FD63D91C-48E9-423E-838F-76363A32DBB6 - 7704e83f50ee3dc2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine(png_image_tag*, unsigned char*, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "334"
+                  endingLineNumber = "334"
+                  offsetFromSymbolStart = "524">
+               </Location>
+               <Location
+                  uuid = "FD63D91C-48E9-423E-838F-76363A32DBB6 - 480b3a9d91682c8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "334"
+                  endingLineNumber = "334"
+                  offsetFromSymbolStart = "536">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5FD01E07-27C9-48C4-A8E6-235C4D787E57"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/ViewController.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "404"
+            endingLineNumber = "404"
+            landmarkName = "-compressPNG:dest:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "B3BD29A8-796A-498D-8457-8E1738885C64"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Image2ESL/png.inl"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "340"
+            endingLineNumber = "340"
+            landmarkName = "PNG_addLine(pImage, pSrc, y)"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "B3BD29A8-796A-498D-8457-8E1738885C64 - 7704e83f50ee3a98"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine(png_image_tag*, unsigned char*, int)"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "340"
+                  endingLineNumber = "340"
+                  offsetFromSymbolStart = "604">
+               </Location>
+               <Location
+                  uuid = "B3BD29A8-796A-498D-8457-8E1738885C64 - 480b3a9d9168592"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "PNG_addLine"
+                  moduleName = "Image2ESL"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/laurencebank/Projects/BLE_2_EPaper/Image2ESL/Image2ESL/png.inl"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "340"
+                  endingLineNumber = "340"
+                  offsetFromSymbolStart = "616">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

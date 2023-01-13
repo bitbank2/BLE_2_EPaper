@@ -768,7 +768,19 @@
                                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                             <font key="font" metaFont="system"/>
                                         </buttonCell>
+                                        <connections>
+                                            <action selector="DitherPushed:" target="XfG-lQ-9wD" id="AN7-Ie-dwX"/>
+                                        </connections>
                                     </button>
+                                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="KEE-h5-qAC" userLabel="Image Label">
+                                        <rect key="frame" x="135" y="420" width="372" height="16"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                        <textFieldCell key="cell" lineBreakMode="clipping" alignment="center" title="Image Size Info" id="bfW-by-l5l">
+                                            <font key="font" metaFont="system"/>
+                                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                        </textFieldCell>
+                                    </textField>
                                 </subviews>
                             </customView>
                         </subviews>
@@ -776,6 +788,7 @@
                     <connections>
                         <outlet property="ConnectButton" destination="rga-zO-Ac4" id="3pY-U2-sPG"/>
                         <outlet property="DitherCheck" destination="rQR-9o-KBP" id="dN9-Lg-QK1"/>
+                        <outlet property="InfoLabel" destination="KEE-h5-qAC" id="utH-e8-ja9"/>
                         <outlet property="StatusLabel" destination="Zys-OO-ldj" id="UMQ-Cb-uEF"/>
                         <outlet property="myImage" destination="Cg3-ap-Mtc" id="emA-AS-2a8"/>
                     </connections>

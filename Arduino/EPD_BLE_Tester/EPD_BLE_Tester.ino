@@ -20,6 +20,7 @@
 static TIFFG4 g4;
 //static BLEDevice peripheral;
 #ifdef HAS_BLE
+static bool bActive = false;
 static int iHead, iTail, epd_buffer_size;
 static uint8_t epd_temp[512*2]; // receive buffer for this characteristic (max 2 * MTU)
 static uint8_t ucBuffer[512]; // receive buffer
@@ -133,7 +134,7 @@ const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
 const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
 
 #ifdef HAS_BLE
-
+#define BLE_TIMEOUT 1000
 void  epd_decode_pcx(uint8_t *pBuf, int *pTail, int *pHead, uint8_t u8Cmd)
 {
 uint8_t uc, *s, *pEnd;
@@ -172,6 +173,7 @@ int i;
 void myDataWrite(uint8_t *pData, int iLen) {
         if (pData[0] & EPD_FIRST_PACKET) {
           int cx, cy;
+          bActive = true; // new image reception started
           if (epd.getRotation() == 0) {
             cx = epd.width();
             cy = epd.height();
@@ -215,6 +217,7 @@ void myDataWrite(uint8_t *pData, int iLen) {
         } /* switch on command */
         if (pData[0] & EPD_LAST_PACKET) {
              epd.display();
+             bActive = false;
         }
 } /* myDataWrite() */
 
@@ -336,7 +339,7 @@ void BLETest(void)
   oled.fillScreen(OBD_WHITE);
   oled.setFont(FONT_12x16);
 #ifdef HAL_ESP32_HAL_H_
-    BLEDevice::init("EPD_Tester");
+    BLEDevice::init("EPD_ESP32");
 #else
   if (!BLE.begin()) {
     oled.println("BLE failed");
@@ -364,14 +367,14 @@ void BLETest(void)
 //  pAdvertising->setScanResponse(true);
 //  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
 //  pAdvertising->setMinPreferred(0x12);
-  advertisementData.setShortName("EPD_Tester");
+  advertisementData.setShortName("EPD_ESP32");
   advertisementData.setManufacturerData((char *)&iPanel);
   pAdvertising->setAdvertisementData(advertisementData);
  
   BLEDevice::startAdvertising();
 #else
-   BLE.setDeviceName("EPD_Tester");
-   BLE.setLocalName("EPD_Tester");
+   BLE.setDeviceName("EPD_Nano33");
+   BLE.setLocalName("EPD_Nano33");
    BLE.setManufacturerData((const uint8_t *)&iPanel, 4);
    BLE.setAdvertisedService(tiffService);
   // add the characteristic to the service
@@ -402,6 +405,7 @@ void BLETest(void)
 
   // if a central is connected to peripheral:
   if (central) {
+    long lTime;
     oled.setCursor(0,0);
     oled.println("Connected!");
     // print the central's MAC address:
@@ -415,6 +419,13 @@ void BLETest(void)
         int iLen = tiffCharacteristic.valueLength();
         tiffCharacteristic.readValue(ucBuffer, iLen);
         myDataWrite(ucBuffer, iLen);
+        lTime = millis(); // time of last write
+      } else {
+        if (bActive && millis() - lTime > BLE_TIMEOUT) {
+          // something went wrong; the data was missed or stopped
+          oled.println("Timeout error!");
+          bActive = false;
+        }
       }
     } // while connected
     oled.fillScreen(OBD_WHITE);
@@ -436,7 +447,7 @@ void epdBegin()
     delay(100); // allow time to settle
   }
   epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
-  epd.SPIbegin(iPanel + EPD42_400x300, 4000000); // initalize library for this panel
+  epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
 //  epd.allocBuffer();
  // epd.setBuffer(ucImage);
 } /* epdBegin() */
@@ -501,6 +512,9 @@ void EPDClear(void)
   oled.println("Clear EPD");
   oled.println("Starting...");
   epdBegin();
+  if (epd.width() < epd.height() || !epd.getBuffer()) {
+       epd.setRotation(90);
+  }
   epd.fillScreen(OBD_WHITE);
   epd.display(); // display the white buffer and return
 } /* EPDClear() */

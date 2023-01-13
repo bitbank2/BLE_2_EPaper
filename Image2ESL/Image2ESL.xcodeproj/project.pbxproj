@@ -10,6 +10,14 @@
 		191C5EBA276E1C100051F53F /* DragDropView.m in Sources */ = {isa = PBXBuildFile; fileRef = 191C5EB8276E1C100051F53F /* DragDropView.m */; };
 		191C5EBB276E1C100051F53F /* MyBLE.m in Sources */ = {isa = PBXBuildFile; fileRef = 191C5EB9276E1C100051F53F /* MyBLE.m */; };
 		191C5EBD277368620051F53F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 191C5EBC277368620051F53F /* Main.storyboard */; };
+		19305FC22966C784001FEBBB /* pngencoder.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FC12966C784001FEBBB /* pngencoder.c */; };
+		19305FD22966C7B5001FEBBB /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FC52966C7B4001FEBBB /* crc32.c */; };
+		19305FD32966C7B5001FEBBB /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FC62966C7B4001FEBBB /* zutil.c */; };
+		19305FD42966C7B5001FEBBB /* deflate.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FCB2966C7B4001FEBBB /* deflate.c */; };
+		19305FD52966C7B5001FEBBB /* PNGenc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 19305FCC2966C7B4001FEBBB /* PNGenc.cpp */; };
+		19305FD62966C7B5001FEBBB /* adler32.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FCE2966C7B4001FEBBB /* adler32.c */; };
+		19305FD72966C7B5001FEBBB /* png.inl in Resources */ = {isa = PBXBuildFile; fileRef = 19305FCF2966C7B4001FEBBB /* png.inl */; };
+		19305FD82966C7B5001FEBBB /* trees.c in Sources */ = {isa = PBXBuildFile; fileRef = 19305FD12966C7B4001FEBBB /* trees.c */; };
 		19AF6368276E1AF80022088D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 19AF6367276E1AF80022088D /* AppDelegate.m */; };
 		19AF636B276E1AF80022088D /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 19AF636A276E1AF80022088D /* ViewController.m */; };
 		19AF636D276E1AF90022088D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 19AF636C276E1AF90022088D /* Assets.xcassets */; };
@@ -25,6 +33,22 @@
 		191C5EB9276E1C100051F53F /* MyBLE.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyBLE.m; sourceTree = "<group>"; };
 		191C5EBC277368620051F53F /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Main.storyboard; sourceTree = "<group>"; };
 		191C5EC2277390680051F53F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		19305FC12966C784001FEBBB /* pngencoder.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = pngencoder.c; sourceTree = "<group>"; };
+		19305FC32966C7B3001FEBBB /* zutil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zutil.h; sourceTree = "<group>"; };
+		19305FC42966C7B4001FEBBB /* gzguts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gzguts.h; sourceTree = "<group>"; };
+		19305FC52966C7B4001FEBBB /* crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = crc32.c; sourceTree = "<group>"; };
+		19305FC62966C7B4001FEBBB /* zutil.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = zutil.c; sourceTree = "<group>"; };
+		19305FC72966C7B4001FEBBB /* trees.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = trees.h; sourceTree = "<group>"; };
+		19305FC82966C7B4001FEBBB /* PNGenc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PNGenc.h; sourceTree = "<group>"; };
+		19305FC92966C7B4001FEBBB /* deflate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = deflate.h; sourceTree = "<group>"; };
+		19305FCA2966C7B4001FEBBB /* crc32.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crc32.h; sourceTree = "<group>"; };
+		19305FCB2966C7B4001FEBBB /* deflate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = deflate.c; sourceTree = "<group>"; };
+		19305FCC2966C7B4001FEBBB /* PNGenc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PNGenc.cpp; sourceTree = "<group>"; };
+		19305FCD2966C7B4001FEBBB /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
+		19305FCE2966C7B4001FEBBB /* adler32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = adler32.c; sourceTree = "<group>"; };
+		19305FCF2966C7B4001FEBBB /* png.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = png.inl; sourceTree = "<group>"; };
+		19305FD02966C7B4001FEBBB /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
+		19305FD12966C7B4001FEBBB /* trees.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = trees.c; sourceTree = "<group>"; };
 		19AF6363276E1AF80022088D /* Image2ESL.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Image2ESL.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19AF6366276E1AF80022088D /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		19AF6367276E1AF80022088D /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -68,6 +92,7 @@
 		19AF6365276E1AF80022088D /* Image2ESL */ = {
 			isa = PBXGroup;
 			children = (
+				19305FC12966C784001FEBBB /* pngencoder.c */,
 				19FDB6712930DF1E009B0C30 /* g4enc.inl */,
 				19FDB6722930DF1E009B0C30 /* G4ENCODER.h */,
 				19FDB6752930ED37009B0C30 /* g4encoder.c */,
@@ -84,6 +109,21 @@
 				191C5EBC277368620051F53F /* Main.storyboard */,
 				19AF6371276E1AF90022088D /* main.m */,
 				19AF6373276E1AF90022088D /* Image2ESL.entitlements */,
+				19305FCE2966C7B4001FEBBB /* adler32.c */,
+				19305FC52966C7B4001FEBBB /* crc32.c */,
+				19305FCA2966C7B4001FEBBB /* crc32.h */,
+				19305FCB2966C7B4001FEBBB /* deflate.c */,
+				19305FC92966C7B4001FEBBB /* deflate.h */,
+				19305FC42966C7B4001FEBBB /* gzguts.h */,
+				19305FCF2966C7B4001FEBBB /* png.inl */,
+				19305FCC2966C7B4001FEBBB /* PNGenc.cpp */,
+				19305FC82966C7B4001FEBBB /* PNGenc.h */,
+				19305FD12966C7B4001FEBBB /* trees.c */,
+				19305FC72966C7B4001FEBBB /* trees.h */,
+				19305FD02966C7B4001FEBBB /* zconf.h */,
+				19305FCD2966C7B4001FEBBB /* zlib.h */,
+				19305FC62966C7B4001FEBBB /* zutil.c */,
+				19305FC32966C7B3001FEBBB /* zutil.h */,
 			);
 			path = Image2ESL;
 			sourceTree = "<group>";
@@ -146,6 +186,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				191C5EBD277368620051F53F /* Main.storyboard in Resources */,
+				19305FD72966C7B5001FEBBB /* png.inl in Resources */,
 				19AF636D276E1AF90022088D /* Assets.xcassets in Resources */,
 				19FDB6742930DF1F009B0C30 /* g4enc.inl in Resources */,
 			);
@@ -158,12 +199,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19305FD32966C7B5001FEBBB /* zutil.c in Sources */,
+				19305FD52966C7B5001FEBBB /* PNGenc.cpp in Sources */,
+				19305FC22966C784001FEBBB /* pngencoder.c in Sources */,
 				19AF636B276E1AF80022088D /* ViewController.m in Sources */,
 				19AF6372276E1AF90022088D /* main.m in Sources */,
 				19AF6368276E1AF80022088D /* AppDelegate.m in Sources */,
+				19305FD42966C7B5001FEBBB /* deflate.c in Sources */,
 				191C5EBA276E1C100051F53F /* DragDropView.m in Sources */,
+				19305FD82966C7B5001FEBBB /* trees.c in Sources */,
+				19305FD22966C7B5001FEBBB /* crc32.c in Sources */,
 				19FDB6762930ED37009B0C30 /* g4encoder.c in Sources */,
 				191C5EBB276E1C100051F53F /* MyBLE.m in Sources */,
+				19305FD62966C7B5001FEBBB /* adler32.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
