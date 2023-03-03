@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -56,7 +57,7 @@ public class FirstFragment extends Fragment {
     private static final long SCAN_PERIOD = 5000;
     private static Context localContext;
     public static BluetoothDevice eslDevice;
-    public static int iSelectedPos;
+    public static int iSelectedPos, iPanelType;
 
     @Override
     public View onCreateView(
@@ -136,6 +137,7 @@ public class FirstFragment extends Fragment {
         binding.scan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                iPanelType = 11; // DEBUG - default to 122x250
                 // Check if the adapter wasn't created at create time
                 if (mBluetoothAdapter != null && mBluetoothLeScanner == null) {
                     mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
@@ -240,7 +242,27 @@ public class FirstFragment extends Fragment {
 
         return type;
     }
+    //
+    // Parse the BLE scan record (advertisement data) returned from the BLE scan
+    // of each device. We're looking for our specific record with the EPD panel type
+    //
+    private void parseScanRecord(byte[] advertisedData) {
+        int offset = 0;
+        while (offset < (advertisedData.length - 2)) {
+            int len = advertisedData[offset++];
+            if (len == 0)
+                break;
 
+            int type = advertisedData[offset++];
+            if (type == -1) { // manufacturer data (what we want)
+                if (advertisedData[offset+1] == 0 && advertisedData[offset+2] == 0 && advertisedData[offset+3] == 0) {
+                    iPanelType = advertisedData[offset];
+                    return; // done
+                }
+            }
+            offset += len-1;
+        } // while scanning the data
+    }
     /*
      to call startScan (ScanCallback callback),
      Requires BLUETOOTH_ADMIN permission.
@@ -285,14 +307,24 @@ public class FirstFragment extends Fragment {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
 
-            addBluetoothDevice(result.getDevice());
+           if (addBluetoothDevice(result.getDevice())) {
+               if (result.getScanRecord() != null) {
+                   byte[] mScanRecord = result.getScanRecord().getBytes();
+                   parseScanRecord(mScanRecord);
+               }
+           }
         }
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             super.onBatchScanResults(results);
             for(ScanResult result : results){
-                addBluetoothDevice(result.getDevice());
+                if (addBluetoothDevice(result.getDevice())) {
+                    if (result.getScanRecord() != null) {
+                        byte[] mScanRecord = result.getScanRecord().getBytes();
+                        parseScanRecord(mScanRecord);
+                    }
+                }
             }
         }
 
@@ -304,7 +336,7 @@ public class FirstFragment extends Fragment {
                     Toast.LENGTH_LONG).show();
         }
 
-        private void addBluetoothDevice(BluetoothDevice device){
+        private boolean addBluetoothDevice(BluetoothDevice device){
             String deviceName = device.getName();
             if (deviceName == null) { // use the address
                 deviceName = device.toString();
@@ -314,7 +346,9 @@ public class FirstFragment extends Fragment {
                 listBTName.add(deviceName);
                 binding.lelist.invalidateViews();
                 binding.lelist.deferNotifyDataSetChanged();
+                return true;
             }
+            return false;
         }
     };
 

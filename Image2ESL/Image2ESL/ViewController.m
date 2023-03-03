@@ -22,6 +22,8 @@ enum {
         BLE_CMD_G4,
         BLE_CMD_PCX,
         BLE_CMD_PNG,
+        BLE_CMD_PB,
+        BLE_CMD_LZW,
         BLE_CMD_GFX_CMDS,
         BLE_CMD_COUNT
 };
@@ -37,37 +39,49 @@ const char *szPanelNames[] = {  "EPD42_400x300", // WFT0420CZ15
   "EPD29_128x296",
   "EPD29B_128x296",
   "EPD29R_128x296",
+  "EPD29Y_128x296",
   "EPD293_128x296",
   "EPD42R_400x300",
   "EPD42R2_400x300",
   "EPD213B_104x212",
   "EPD213R_104x212",
+  "EPD213R2_122x250", // DEPG0213RW
   "EPD213R_104x212_d",
   "EPD213_104x212",
   "EPD213_122x250", // waveshare
   "EPD213B_122x250", // GDEY0213B74
   "EPD154_152x152", // GDEW0154M10
   "EPD154R_152x152",
+  "EPD154Y_152x152",
   "EPD154_200x200", // waveshare
   "EPD27_176x264", // waveshare
   "EPD27b_176x264", // GDEY027T91
   "EPD266_152x296", // GDEY0266T90
+  "EPD31R_168x296",
+  "EPD37Y_240x416",
+  "EPD37_240x416",
   "EPD579_792x272", // GDEY0579T93
   "EPD583R_600x448",
   "EPD74R_640x384",
   "EPD35Y_184x384", // Hanshow Nebular black/white/yellow (#22)
 };
-const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3,3};
-const uint8_t u8IsRotated[] =   {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,1};
+const uint8_t u8PanelColors[] = {2,2,2,3,3,2,3,3,2,3,3,3,2,2,2,2,3,3,2,2,2,2,3,3,2,2,3,3,3};
+const uint8_t u8IsRotated[] =   {0,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,0,0,1};
 
-const int iPanelWidths[] = {400, 296, 296, 296, 296, 400, 400, 212, 212, 212, 212, 250, 250, 152, 152, 200, 264, 264, 296, 792, 600, 640, 384};
-const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 104, 122, 122, 152, 152, 200, 176, 176, 152, 272, 448, 384, 184};
+const int iPanelWidths[] = {400, 296, 296, 296, 296, 296, 400, 400, 212, 212, 250, 212, 212, 250, 250, 152, 152, 152, 200, 264, 264, 296, 296,416,416, 792, 600, 640, 384};
+const int iPanelHeights[] = {300, 128, 128, 128, 128, 128, 300, 300, 104, 104, 122, 104, 104, 122, 122, 152, 152, 152, 200, 176, 176, 152, 168, 240, 240, 272, 448, 384, 184};
 
 @implementation ViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     _myview = [DragDropView alloc];
+    [_myPopUp removeAllItems];
+    [_myPopUp addItemWithTitle:@"Smallest"];
+    [_myPopUp addItemWithTitle:@"Uncompressed"];
+    [_myPopUp addItemWithTitle:@"TIFF G4"];
+    [_myPopUp addItemWithTitle:@"PCX"];
+    [_myPopUp addItemWithTitle:@"PackBits"];
 }
 
 - (void)viewDidLayout {
@@ -101,6 +115,9 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 }
 - (IBAction)DitherPushed:(NSButton *)sender {
     [self ditherFile:nil];
+}
+- (IBAction)InvertPushed:(NSButton *)sender {
+   // NSLog(@"Invert Pushed");
 }
 
 - (IBAction)FeedPushed:(NSButton *)sender {
@@ -315,25 +332,30 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
             } // for x
 //            cOut <<= (8-(x & 7));
 //            cOut1 <<= (8-(x & 7));
-            d[iOffset] = cOut1;
-            *d++ = ~cOut; // store partial byte
+            if (x & xmask) {
+                d[iOffset] = cOut1;
+                *d++ = ~cOut; // store partial byte
+            }
         } // for y
     }
     {
-        uint8_t *pG4Out, *pPCXOut, *pPNGOut;
-        int iPCXTotal, iG4Total, iPNGTotal;
+        uint8_t *pG4Out, *pPCXOut, *pPNGOut, *pPBOut;
+        int iPCXTotal, iG4Total, iPNGTotal, iPBTotal;
         pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
         pG4Out = malloc(OUTBUFFER_SIZE);
         pPNGOut = malloc(OUTBUFFER_SIZE);
+        pPBOut = malloc(OUTBUFFER_SIZE);
         // compare the compressed data size
         iPCXTotal = [self compressPCX:pDest dest:pPCXOut];
         iG4Total = [self compressG4:pDest dest:pG4Out];
         iPNGTotal = [self compressPNG:pDest dest:pPNGOut];
-        sprintf((char *)ucTemp, "Uncomp: %d, PCX: %d, G4: %d, PNG: %d", iHeight * iDestPitch * (u8PanelColors[BLEClass.iPanelType] -1), iPCXTotal, iG4Total, iPNGTotal);
+        iPBTotal = [self compressPB:pDest dest:pPBOut];
+        sprintf((char *)ucTemp, "Uncomp: %d, PCX: %d, G4: %d, PNG: %d, PB: %d", iHeight * iDestPitch * (u8PanelColors[BLEClass.iPanelType] -1), iPCXTotal, iG4Total, iPNGTotal, iPBTotal);
         _InfoLabel.stringValue = [NSString stringWithFormat:@"%s", (char *)ucTemp];
         free(pPCXOut);
         free(pG4Out);
         free(pPNGOut);
+        free(pPBOut);
     }
     return pDest;
 } /* DitherImage */
@@ -448,8 +470,8 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     return G4ENC_getOutSize(&g4);
 } /* compressG4() */
 
-// Compress a single PCX line
-- (uint8_t) PCXLine:(uint8_t *)s dest:(uint8_t **)ppDest compare:(uint8_t)cCompare line_length:(int)iLen repeats:(int *)pRepeat
+// Compress a buffer as PCX
+- (uint8_t) EncodePCX:(uint8_t *)s dest:(uint8_t **)ppDest compare:(uint8_t)cCompare line_length:(int)iLen repeats:(int *)pRepeat
 {
     int iRepeat = *pRepeat;
     uint8_t *pDest = *ppDest;
@@ -493,7 +515,101 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     *pRepeat = iRepeat;
     *ppDest = pDest;
     return cCompare;
-} /* PCXLine() */
+} /* EncodePCX() */
+
+//
+// Encode a buffer as packbits
+//
+- (int) EncodePackBits:(uint8_t *)pSrc dest:(uint8_t *)pDest length:(int)iLen
+{
+uint8_t *pOut, *pStart, o, c;
+int iCount;
+
+    pOut = pDest;
+    
+encpb0:
+      if (iLen < 2) /* can't have repeats with less than 2 */
+         goto encpb1;
+      pStart = pSrc; /* Preserve line pointer */
+      iCount = 1; /* Repeat count */
+      o = *pSrc++;  /* Set the compare byte */
+enc0:
+      c = *pSrc++;
+      if (c == o)
+         {
+         iCount++;
+         if (iCount != iLen) /* End of line reached? */
+            goto enc0; /* Keep finding repeats */
+         }
+      pSrc = pStart; /* Restore pointer to start of section */
+      if (iCount == 1) /* Any repeats? */
+         goto encpb1; /* Look for consecutive, non-repeats */
+      pSrc += iCount;
+      iLen -= iCount;
+      while (iCount > 127)
+         {
+         *pDest++ = 0x81; /* Store max count */
+         *pDest++ = o; /* Store the repeating byte */
+         iCount -= 128;
+         }
+      if (iCount) /* We may have had exactly 128 */
+         {
+         *pDest++ = (unsigned char)(1 - iCount);
+         *pDest++ = o;
+         }
+encpb1:
+/* Find # of consec non-repeats */
+      if (iLen == 0) /* Done with the line? */
+         return (int)(pDest - pOut);
+      if (iLen == 1) /* Special case */
+         goto encpb2;
+    /* Count non-repeats */
+      pStart = pSrc;
+      o = *pSrc++; /* Get the compare byte */
+      iCount = 1; /* Assume 1 non-repeat to start */
+enc1:
+      c = *pSrc++;
+      if (c == o)
+         goto enc2;
+      o = c;
+      iCount++;
+      if (iCount != iLen)
+         goto enc1;
+enc2:
+      pSrc = pStart; /* Restore section pointer */
+      if (iCount == 1) /* No repeats */
+         goto encpb2;
+/* Store the non-repeats */
+      iCount--; /* Get rid of extra one */
+      iLen -= iCount;
+      while (iCount > 127)
+         {
+         *pDest++ = 127; /* Store max non-repeat count of 127 */
+         memcpy(pDest, pSrc, 128);
+         pSrc += 128;
+         pDest += 128;
+         iCount -= 128;
+         }
+      if (iCount)
+         {
+         *pDest++ = (char)iCount-1;
+         memcpy(pDest, pSrc, iCount);
+         pSrc += iCount;
+         pDest += iCount;
+         }
+encpb2:
+      if (iLen == 1) /* Nothing useful left to do */
+         {
+         *pDest++ = 0;
+         *pDest++ = *pSrc++;
+//         return pDest; // suppress compiler warning
+         }
+      else
+         goto encpb0; /* Look for repeats */
+
+    return (int)(pDest - pOut);
+
+} /* EncodePackBits() */
 
 // Compress an image using the "PCX" style run length encoding. It encodes runs of repeating bytes as well
 // as blocks of non-repeating bytes with a reasonable balance.
@@ -511,13 +627,26 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
         s = &pSource[(iWidth-1) >> 3];
         [self getRotatedLine: s current_x:iWidth-1 destination:ucTemp];
         cCompare = ucTemp[0]; // grab first byte for comparison
-        iPitch = (iHeight*iHeightMult+7) >> 3;
+        iPitch = (iHeight+7) >> 3;
         for (x=iWidth-1; x>=0; x--)
         {
             s = &pSource[x >> 3];
             [self getRotatedLine: s current_x:x destination:ucTemp];
-            cCompare = [self PCXLine:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
+            cCompare = [self EncodePCX:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
         } // for x
+        if (u8PanelColors[BLEClass.iPanelType] == 3) {
+            // compress second plane after first
+            for (x=iWidth-1; x>=0; x--)
+            {
+                s = &pSource[(x >> 3) + (((iWidth+7)/8)*iHeight)];
+                [self getRotatedLine: s current_x:x destination:ucTemp];
+                // Invert for red/yellow plane
+                for (int i=0; i<iPitch; i++) {
+                    ucTemp[i] = ~ucTemp[i]; // invert the pixels
+                }
+                cCompare = [self EncodePCX:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
+            } // for x
+        }
     } else { // not rotated
         cCompare = ~pSource[0];
         iPitch = (iWidth+7) >> 3;
@@ -528,7 +657,7 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
             for (int i=0; i<iPitch; i++) {
                 ucTemp[i] = ~s[i];
             }
-            cCompare = [self PCXLine:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
+            cCompare = [self EncodePCX:ucTemp dest:&pDest compare:cCompare line_length:iPitch repeats:&iRepeat];
         } // for x
     }
     // store any remaining repeating bytes
@@ -560,6 +689,50 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     return iOutSize;
 } /* compressPCX() */
 
+// Compress an image using the "PackBits" style run length encoding. It encodes runs of repeating bytes as well
+// as blocks of non-repeating bytes with a reasonable balance.
+- (int)compressPB:(uint8_t *)pSource dest:(uint8_t *)pDest
+{
+    int iOutSize;
+    int x, iPitch, iRepeat;
+    uint8_t *pTemp;
+    uint8_t *s, *pStart;
+    uint8_t ucTemp[256];
+    int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
+    
+    pStart = pDest;
+    iRepeat = 0;
+    if (u8IsRotated[BLEClass.iPanelType]) { // 90 degrees rotated panel
+        iPitch = (iHeight+7) >> 3;
+        pTemp = malloc(iWidth * iPitch * iHeightMult);
+        // capture the bitmap at 90 degrees rotated
+        for (x=iWidth-1; x>=0; x--)
+        {
+            s = &pSource[x >> 3];
+            [self getRotatedLine:s current_x:x destination:ucTemp];
+            memcpy(&pTemp[(iWidth-1-x) * iPitch], ucTemp, iPitch);
+        } // for x
+        if (u8PanelColors[BLEClass.iPanelType] == 3) {
+            // capture red/yellow plane
+            for (x=iWidth-1; x>=0; x--)
+            {
+                s = &pSource[(x >> 3) + (((iWidth+7)/8)*iHeight)];
+                [self getRotatedLine:s current_x:x destination:ucTemp];
+                for (int i=0; i<iPitch; i++) {
+                    ucTemp[i] = ~ucTemp[i]; // invert
+                }
+                memcpy(&pTemp[(iWidth*2 - 1 - x) * iPitch], ucTemp, iPitch);
+            } // for x
+        }
+        iOutSize = [self EncodePackBits:pTemp dest:pDest length:(iWidth * iPitch * iHeightMult)];
+        free(pTemp);
+    } else { // not rotated
+        iPitch = (iWidth+7)>>3;
+        iOutSize = [self EncodePackBits:pSource dest:pDest length:(iHeight * iPitch)];
+    }
+    return iOutSize;
+} /* compressPB() */
+
 //
 // Send image data over BLE
 //
@@ -568,12 +741,12 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     uint8_t ucTemp[512];
     int x, y, iLen, iSent = 0;
     int iBlock, iPayloadSize, iBlockCount;
-    float fDelay = 0.0750; // seconds
+    float fDelay = 0.05; // seconds
     
     iPayloadSize = BLEClass.iMTUSize - 1;
     iBlockCount = (iSize + iPayloadSize -1) / iPayloadSize;
     if (u8Type != BLE_CMD_UNCOMPRESSED)
-        fDelay = 0.1; // give more time for destination to decode the dat
+        fDelay = 0.2; // give more time for destination to decode the dat
     
     x = iSize;
     y = 0;
@@ -586,7 +759,7 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
             ucTemp[0] |= BLE_FIRST_PACKET; // first data block
         if (iBlock == iBlockCount-1) // could be a single block with both flags
             ucTemp[0] |= BLE_LAST_PACKET; // last data block
-       [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
+        [BLEClass writeData:ucTemp withLength:(iLen+1) withResponse:YES];
         [NSThread sleepForTimeInterval: fDelay]; // allow receiver time to process the data
         iSent += iLen+1;
         x -= iLen;
@@ -601,31 +774,69 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 - (void)sendImage
 {
     uint8_t *s, *d;
-    int x, y, iSent, iTotal, iG4Total, iPCXTotal;
-    uint8_t *pG4Out, *pPCXOut, *pOut;
+    int iPreferred;
+    int x, y, iSent, iOutSize, iTotal, iG4Total, iPCXTotal, iPBTotal;
+    uint8_t ucOutType, *pG4Out, *pPCXOut, *pPBOut, *pOut = NULL;
     int iHeightMult = (u8PanelColors[BLEClass.iPanelType] == 2) ? 1:2;
     int iPitch;
     if (pDithered == NULL) return; // no image to send
     if (u8IsRotated[BLEClass.iPanelType]) {
-        iPitch = ((iHeight*iHeightMult)+7)/8;
-        iTotal = iPitch * iWidth;
+        iPitch = (iHeight+7)/8;
+        iTotal = iPitch * iWidth * iHeightMult;
     } else {
         iPitch = (iWidth+7)/8;
         iTotal = iPitch * iHeight * iHeightMult;
     }
+    ucOutType = BLE_CMD_UNCOMPRESSED;
+    iOutSize = iTotal;
     pPCXOut = malloc(OUTBUFFER_SIZE); // max reasonable size
     pG4Out = malloc(OUTBUFFER_SIZE);
+    pPBOut = malloc(OUTBUFFER_SIZE);
     NSLog(@"Uncompressed size = %d", iTotal);
     // Test if it can be compressed
     iPCXTotal = [self compressPCX:pDithered dest:pPCXOut];
     NSLog(@"PCX compressed size = %d", iPCXTotal);
+    iPBTotal = [self compressPB:pDithered dest:pPBOut];
+    NSLog(@"PB compressed size = %d", iPBTotal);
     iG4Total = [self compressG4:pDithered dest:pG4Out];
     NSLog(@"G4 compressed size = %d", iG4Total);
     // Now send it to the ESL
-    if (iG4Total < iTotal && iG4Total < iPCXTotal) { // G4 beat uncompressed and PCX
-        iSent = [self sendData:pG4Out type:BLE_CMD_G4 size:iG4Total];
-    } else if (iPCXTotal < iTotal) { // PCX beat uncompressed and G4
-        iSent = [self sendData:pPCXOut type:BLE_CMD_PCX size:iPCXTotal];
+    iPreferred = (int)_myPopUp.indexOfSelectedItem; // User's preference for data type
+    if (iPreferred == 0) { // smallest
+        if (iG4Total < iOutSize) {
+            ucOutType = BLE_CMD_G4;
+            pOut = pG4Out;
+            iOutSize = iG4Total;
+        }
+        if (iPBTotal < iOutSize) {
+            ucOutType = BLE_CMD_PB;
+            pOut = pPBOut;
+            iOutSize = iPBTotal;
+        }
+        if (iPCXTotal < iOutSize) {
+            ucOutType = BLE_CMD_PCX;
+            pOut = pPCXOut;
+            iOutSize = iPCXTotal;
+        }
+    } else if (iPreferred == 1) { // uncompressed
+        ucOutType = BLE_CMD_UNCOMPRESSED;
+        iOutSize = iTotal;
+    } else if (iPreferred == 2) { // TIFF G4
+        ucOutType = BLE_CMD_G4;
+        pOut = pG4Out;
+        iOutSize = iG4Total;
+    } else if (iPreferred == 3) { // PCX
+        ucOutType = BLE_CMD_PCX;
+        pOut = pPCXOut;
+        iOutSize = iPCXTotal;
+    } else if (iPreferred == 4) { // PackBits
+        ucOutType = BLE_CMD_PB;
+        pOut = pPBOut;
+        iOutSize = iPBTotal;
+    }
+    // send it
+    if (iOutSize != iTotal) { // compressed output
+        iSent = [self sendData:pOut type:ucOutType size:iOutSize];
     } else { // send uncompressed
         // transmit the uncompressed data in the destination EPD format to be written directly on arrival
         // first prepare the uncompressed data in a single block
@@ -637,6 +848,18 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
                 [self getRotatedLine: s current_x:x destination: &pOut[iSent]];
                 iSent += iPitch;
             } // for x
+            if (iHeightMult == 2) { // add second plane
+                for (x=iWidth-1; x>=0; x--) {
+                    // rotate the image 90
+                    s = &pDithered[(x >> 3) + (iTotal/2)];
+                    [self getRotatedLine: s current_x:x destination: &pOut[iSent]];
+                    // invert it for red/yellow plane
+                    for (int i=0; i<iPitch; i++) {
+                        pOut[iSent+i] = 0; //~pOut[iSent+i];
+                    }
+                    iSent += iPitch;
+                } // for each line of image
+            }
         } else { // not rotated
             d = pOut;
             for (y=0; y<iHeight*iHeightMult; y++) {
@@ -653,6 +876,7 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
     // Free local compressed data buffers
     free(pPCXOut);
     free(pG4Out);
+    free(pPBOut);
 } /* sendImage */
 
 - (void)statusChanged:(NSNotification *) notification
@@ -669,6 +893,8 @@ const int iPanelHeights[] = {300, 128, 128, 128, 128, 300, 300, 104, 104, 104, 1
 - (void)ditherFile:(NSNotification *) notification
 {
     // load the file into an image object
+    if (_filename == nil) return; // nothing to do
+    
     NSData *theFileData = [[NSData alloc] initWithContentsOfFile:_filename options: NSDataReadingMappedAlways error: nil]; // read file into memory
     if (theFileData) {
         // decode the image into a bitmap

@@ -5,7 +5,6 @@
 //  Created by Larry Bank
 //  Copyright (c) 2021 BitBank Software Inc. All rights reserved.
 //
-
 #import <Cocoa/Cocoa.h>
 
 int main(int argc, const char * argv[]) {

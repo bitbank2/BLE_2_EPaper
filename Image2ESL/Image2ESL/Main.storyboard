@@ -781,6 +781,32 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                     </textField>
+                                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="khu-ah-PA0" userLabel="Invert">
+                                        <rect key="frame" x="41" y="397" width="61" height="18"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                        <buttonCell key="cell" type="check" title="Invert" bezelStyle="regularSquare" imagePosition="left" inset="2" id="X8Y-KB-wIs" userLabel="Invert Check">
+                                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                            <font key="font" metaFont="system"/>
+                                        </buttonCell>
+                                        <connections>
+                                            <action selector="InvertPushed:" target="XfG-lQ-9wD" id="ZXo-ON-eHe"/>
+                                        </connections>
+                                    </button>
+                                    <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="26r-Xd-5rt">
+                                        <rect key="frame" x="510" y="369" width="92" height="25"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                        <popUpButtonCell key="cell" type="push" title="Smallest" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="pCg-Yp-BXC" id="i4T-vp-WWs">
+                                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                                            <font key="font" metaFont="menu"/>
+                                            <menu key="menu" id="2zh-SS-RBw">
+                                                <items>
+                                                    <menuItem title="Smallest" state="on" id="pCg-Yp-BXC" userLabel="Smallest"/>
+                                                    <menuItem title="Uncompressed" id="bOJ-QT-rRn" userLabel="Uncompressed"/>
+                                                    <menuItem title="TIFF G4" id="FPj-GA-CtS" userLabel="TIFF G4"/>
+                                                </items>
+                                            </menu>
+                                        </popUpButtonCell>
+                                    </popUpButton>
                                 </subviews>
                             </customView>
                         </subviews>
@@ -789,8 +815,10 @@
                         <outlet property="ConnectButton" destination="rga-zO-Ac4" id="3pY-U2-sPG"/>
                         <outlet property="DitherCheck" destination="rQR-9o-KBP" id="dN9-Lg-QK1"/>
                         <outlet property="InfoLabel" destination="KEE-h5-qAC" id="utH-e8-ja9"/>
+                        <outlet property="InvertCheck" destination="X8Y-KB-wIs" id="ISQ-su-9bG"/>
                         <outlet property="StatusLabel" destination="Zys-OO-ldj" id="UMQ-Cb-uEF"/>
                         <outlet property="myImage" destination="Cg3-ap-Mtc" id="emA-AS-2a8"/>
+                        <outlet property="myPopUp" destination="26r-Xd-5rt" id="Wuo-us-QLk"/>
                     </connections>
                 </viewController>
                 <customObject id="rPt-NT-nkU" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

@@ -1,4 +1,4 @@
-#if defined(ARDUINO_ARDUINO_NANO33BLE) || (defined(HAL_ESP32_HAL_H_) && !defined(ARDUINO_FEATHERS2))
+#if defined(ARDUINO_ARDUINO_NANO33BLE) || (defined(ESP_PLATFORM) && !defined(ARDUINO_FEATHERS2))
 #define HAS_BLE
 #define MODE_COUNT 3
 #else
@@ -6,13 +6,13 @@
 #endif
 
 #include <OneBitDisplay.h>
-#ifdef HAL_ESP32_HAL_H_
+#ifdef ESP_PLATFORM
 // Allow e-paper panel clearing/testing to work without BLE
 #ifndef ARDUINO_FEATHERS2
 #include <BLEDevice.h>
-#include <BLEServer.h>
+#include <BLEUtils.h>
 #endif
-#elif !defined(HAL_ESP32_HAL_H_)
+#elif !defined(ESP_PLATFORM)
 #include <ArduinoBLE.h>
 #endif
 #include <TIFF_G4.h>
@@ -21,7 +21,7 @@ static TIFFG4 g4;
 //static BLEDevice peripheral;
 #ifdef HAS_BLE
 static bool bActive = false;
-static int iHead, iTail, epd_buffer_size;
+static int iHead, iTail, iOldCount, epd_buffer_size;
 static uint8_t epd_temp[512*2]; // receive buffer for this characteristic (max 2 * MTU)
 static uint8_t ucBuffer[512]; // receive buffer
 //static uint8_t ucCompressed[65536];
@@ -40,6 +40,9 @@ bool deviceConnected = false;
 BLEService tiffService("13187b10-eba9-a3ba-044e-83d3217d9a38"); // BLE TIFF Service
 BLECharacteristic tiffCharacteristic("4b646063-6264-f3a7-8941-e65356ea82fe", BLERead | BLEWrite | BLEWriteWithoutResponse, 512);
 #endif
+
+const char *szCmdNames[] = {"Erase", "Raw Data", "G4 Data", "PCX Data", "PNG Data", "PB Data", "LZW Data", "GFX CMDS"};
+
 // command bytes
 enum {
   EPD_ERASE=0,
@@ -47,6 +50,8 @@ enum {
   EPD_G4,
   EPD_PCX,
   EPD_PNG,
+  EPD_PB,
+  EPD_LZW,
   EPD_GFX_CMDS,
   EPD_COUNT
 };
@@ -98,7 +103,7 @@ ONE_BIT_DISPLAY oled, epd;
 #endif
 int iPanel = 0;
 int iMode = 0; // 0=EPD test, 1=BLE test
-#define PANEL_COUNT 22
+#define PANEL_COUNT 25
 
 // Friendly name for the OneBitDisplay library e-paper panel types
 // The first 2 digits signify the panel size (e.g. 42 = 4.2")
@@ -109,32 +114,42 @@ const char *szPanelNames[] = {
   "EPD29_128x296",
   "EPD29B_128x296",
   "EPD29R_128x296",
+  "EPD29Y_128x296", // DEPG0290YN
   "EPD293_128x296",
   "EPD42R_400x300",
   "EPD42R2_400x300",
   "EPD213B_104x212",
   "EPD213R_104x212",
+  "EPD213R2_122x250", // DEPG0213RW
   "EPD213R_104x212_d",
   "EPD213_104x212",
   "EPD213_122x250", // waveshare
   "EPD213B_122x250", // GDEY0213B74
   "EPD154_152x152", // GDEW0154M10
   "EPD154R_152x152",
+  "EPD154Y_152x152", // DEPG0154YN
   "EPD154_200x200", // waveshare
   "EPD27_176x264", // waveshare
   "EPD27b_176x264", // GDEY027T91
   "EPD266_152x296", // GDEY0266T90
+  "EPD31R_168x296", // DEPG0310RW
+  "EPD37Y_240x416", // DEPG0370YN
+  "EPD37_240x416", // DEPG0370BS
   "EPD579_792x272", // GDEY0579T93
   "EPD583R_600x448",
   "EPD74R_640x384",
+  NULL
 };
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,3,2,3,3,2,3,3,2,2,2,2,3,2,2,2,2,2,3,3};
-const uint8_t u8IsRotated[] = {0,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0};
+const uint8_t u8PanelColors[] = {2,2,2,3,3,2,3,3,2,3,3,3,3,2,2,2,2,3,2,2,2,2,3,3,2,2,3,3};
+const uint8_t u8IsRotated[] = {0,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,0,0};
 
 #ifdef HAS_BLE
 #define BLE_TIMEOUT 1000
+//
+// Decode PCX compressed data
+//
 void  epd_decode_pcx(uint8_t *pBuf, int *pTail, int *pHead, uint8_t u8Cmd)
 {
 uint8_t uc, *s, *pEnd;
@@ -154,7 +169,7 @@ int i;
               epd.pushPixels(&s[0], 1);
               iTotal++;
               if (iTotal == epd_buffer_size && u8PanelColors[iPanel] == 3) {
-               //   EPD_WriteCmd(0x13); // start of next memory plane
+                 secondPlane(); // start of next memory plane
               }
           } // for i
           s++;
@@ -162,38 +177,109 @@ int i;
           epd.pushPixels(&uc, 1); // just write it
           iTotal++;
           if (iTotal == epd_buffer_size && u8PanelColors[iPanel] == 3) {
-           //   EPD_WriteCmd(0x13); // start of next memory plane
+             secondPlane(); // start of next memory plane
           }
         }
     } // while decoding
     *pTail = (int)(s - pBuf); // update tail pointer
 } /* epd_decode_pcx() */
 
+//
+// Decode PackBits compressed data
+//
+void  epd_decode_pb(uint8_t *pBuf, int *pTail, int *pHead, int *iOldCount, uint8_t u8Cmd)
+{
+uint8_t uc, *s, *pEnd, ucTemp[256];
+int i, j, iOld;
+
+    u8Cmd &= EPD_LAST_PACKET;
+    s = &pBuf[*pTail];
+    pEnd = &pBuf[*pHead];
+    iOld = *iOldCount;
+    if (!u8Cmd) { // if not the last packet, we may be missing a repeating byte pair
+       pEnd -= 2;
+    }
+    while (s < pEnd) {
+        if (iOld) { // non-repeats
+           j = (int)(pEnd - s); // how many bytes left in buffered data
+           if (j >= iOld) j = iOld; // have enough bytes in current buffer to complete this set
+           if (iTotal < epd_buffer_size && (iTotal+j) >= epd_buffer_size && u8PanelColors[iPanel] == 3) {
+              i = epd_buffer_size - iTotal; // amount we can push to get to the end of the first memory plane
+              epd.pushPixels(s, i);
+              secondPlane();
+              epd.pushPixels(&s[i], j-i);
+           } else { // just push the pixels
+              epd.pushPixels(s, j);
+           }
+           s += j;
+           iTotal += j;
+           iOld -= j;
+           continue;
+        }
+        uc = *s++;
+        if (uc >= 0x80) { // repeating byte
+          j = 257 - uc; // repeat count
+          memset(ucTemp, s[0], j);
+          s++;
+           if (iTotal < epd_buffer_size && (iTotal+j) >= epd_buffer_size && u8PanelColors[iPanel] == 3) {
+              i = epd_buffer_size - iTotal; // amount we can push to get to the end of the first memory plane
+              epd.pushPixels(ucTemp, i);
+              secondPlane();
+              epd.pushPixels(ucTemp, j-i);
+           } else { // just push the pixels
+              epd.pushPixels(ucTemp, j);
+           }
+          iTotal += j;
+        } else { // non-repeating count
+          iOld = uc+1; // new non-repeat count
+        }
+    } // while decoding
+    *pTail = (int)(s - pBuf); // update tail pointer
+    *iOldCount = iOld; // carry over any remaining non-repeat count
+} /* epd_decode_pb() */
+
+
 // Receives BLE data writes
 void myDataWrite(uint8_t *pData, int iLen) {
+        static int iReceived;
         if (pData[0] & EPD_FIRST_PACKET) {
           int cx, cy;
           bActive = true; // new image reception started
-          if (epd.getRotation() == 0) {
-            cx = epd.width();
-            cy = epd.height();
-          } else {
-            cx = epd.height();
-            cy = epd.width();
-          }
+          iOldCount = 0; // reset decompression var
+          cx = epd.width();
+          cy = epd.height();
+          epd_buffer_size = cy * ((cx + 7)/8);
+          //Serial.printf("epd_buffer_size = %d\n", epd_buffer_size);
           epd.setTextColor(OBD_BLACK, OBD_WHITE); // first EPD plane to write
           epd.setPosition(0,0,cx, cy); // get ready to write data
-          epd_buffer_size = epd.height() * (epd.width() + 7)/8;
           //oled.println("First packet");
           iHead = iTail = iTotal = 0;
+          iReceived = 0;
+          oled.setCursor(0,32);
+          oled.print("Type: ");
+          oled.print(szCmdNames[pData[0] & EPD_CMD_MASK]);
         }
         switch (pData[0] & EPD_CMD_MASK) { // first byte is the command
           case EPD_ERASE: // erase the display
+            oled.setCursor(0,32);
+            oled.print("CMD: Erase");
             epd.fillScreen(OBD_WHITE);
             epd.display();
+            iHead = iTail = iTotal = 0; // reset image data if this packet comes in the middle of transmission
             break;
           case EPD_UNCOMPRESSED: // image data
-             epd.pushPixels(&pData[1], iLen-1); // write it straight into the e-paper panel RAM
+             if (iTotal < epd_buffer_size && (iTotal + iLen - 1) >= epd_buffer_size && u8PanelColors[iPanel] == 3) {
+                // crossing into second plane, need to switch at the correct spot
+                int i = epd_buffer_size - iTotal;
+                epd.pushPixels(&pData[1], i);
+                secondPlane();
+                if (iLen-1-i > 0) {
+                   epd.pushPixels(&pData[1+i], iLen-1-i);
+                }
+             } else {
+                epd.pushPixels(&pData[1], iLen-1); // write it straight into the e-paper panel RAM
+             }
+             iTotal += iLen-1;
              break;
           case EPD_G4:
               if (pData[0] & EPD_FIRST_PACKET) {
@@ -201,6 +287,18 @@ void myDataWrite(uint8_t *pData, int iLen) {
               }
               g4.addData(&pData[1], iLen-1);
               g4.decodeInc(!(pData[0] & EPD_LAST_PACKET)); // try to decode a group of lines with the data available
+             break;
+          case EPD_PB: // packbits
+              if (iHead != iTail) { // move down existing data
+                  memmove(epd_temp, &epd_temp[iTail], (iHead-iTail));
+                  iHead -= iTail;
+                  iTail = 0;
+              } else {
+                  iHead = iTail = 0; // if we used all data before, reset to 0
+              }
+              memcpy(&epd_temp[iHead], &pData[1], iLen-1);
+              iHead += (iLen-1);
+              epd_decode_pb(epd_temp, &iTail, &iHead, &iOldCount, pData[0]);
              break;
           case EPD_PCX:
               if (iHead != iTail) { // move down existing data
@@ -215,7 +313,15 @@ void myDataWrite(uint8_t *pData, int iLen) {
               epd_decode_pcx(epd_temp, &iTail, &iHead, pData[0]);
             break;
         } /* switch on command */
+        if ((pData[0] & EPD_CMD_MASK) != EPD_ERASE) {
+            iReceived += iLen - 1;
+            oled.setCursor(0,40);
+            oled.print(iReceived, DEC);
+            oled.print(" Bytes  ");
+        }
         if (pData[0] & EPD_LAST_PACKET) {
+             oled.setCursor(0,48);
+             oled.print("Display!");
              epd.display();
              bActive = false;
         }
@@ -251,12 +357,18 @@ class CharacteristicCallbacks: public BLECharacteristicCallbacks {
 };
 #endif // ESP32
 
+// Active the second memory plane of the red/yellow e-paper panel
+void secondPlane(void)
+{
+   epd.setTextColor(OBD_RED, OBD_WHITE); // activate the second memory plane on BWR/BWY EPDs
+   epd.setPosition(0,0, epd.width(), epd.height());
+} /* secondPlane() */
+
 void TIFFDraw(TIFFDRAW *pDraw)
 {
   int iPitch = ((pDraw->iWidth+7)>>3);
   if (pDraw->y == epd.height() && u8PanelColors[iPanel] == 3) {
-        epd.setTextColor(OBD_RED, OBD_WHITE); // activate the second memory plane on BWR/BWY EPDs
-        epd.setPosition(0,0, epd.width(), epd.height());
+     secondPlane(); // activate the second memory plane of the EPD for red/yellow color
   }
 // write the data straight into the EPD display buffer
 // since it has been formatted+oriented that way at the source
@@ -335,6 +447,7 @@ uint8_t  uc, *s, *d, ucMask, ucSrcMask;
 
 void BLETest(void)
 {
+  int iReceived;
   epdBegin();
   oled.fillScreen(OBD_WHITE);
   oled.setFont(FONT_12x16);
@@ -390,10 +503,12 @@ void BLETest(void)
     while (!deviceConnected) {
       delay(20);
     }
+    oled.setFont(FONT_12x16);
     oled.setCursor(0,0);
     oled.println("Connected!");
+    oled.setFont(FONT_6x8);
     while (deviceConnected) {
-      
+      vTaskDelay(1);
     }
     oled.fillScreen(OBD_WHITE);
     BLEDevice::stopAdvertising();
@@ -406,6 +521,7 @@ void BLETest(void)
   // if a central is connected to peripheral:
   if (central) {
     long lTime;
+    bool bFirstWrite = true;
     oled.setCursor(0,0);
     oled.println("Connected!");
     // print the central's MAC address:
@@ -414,18 +530,22 @@ void BLETest(void)
     oled.setFont(FONT_8x8);
     while (central.connected()) {
       // if the remote device wrote to the characteristic,
-      // use the value to control the LED:
       if (tiffCharacteristic.written()) {
         int iLen = tiffCharacteristic.valueLength();
         tiffCharacteristic.readValue(ucBuffer, iLen);
+        if (bFirstWrite) {
+              oled.print("MTU size: ");
+              oled.println(tiffCharacteristic.MTUSize(), DEC);
+              bFirstWrite = false;
+        }
         myDataWrite(ucBuffer, iLen);
         lTime = millis(); // time of last write
       } else {
-        if (bActive && millis() - lTime > BLE_TIMEOUT) {
-          // something went wrong; the data was missed or stopped
-          oled.println("Timeout error!");
-          bActive = false;
-        }
+     //   if (bActive && millis() - lTime > BLE_TIMEOUT) {
+     //     // something went wrong; the data was missed or stopped
+     //     oled.println("Timeout error!");
+     //     bActive = false;
+     //   }
       }
     } // while connected
     oled.fillScreen(OBD_WHITE);
@@ -447,7 +567,7 @@ void epdBegin()
     delay(100); // allow time to settle
   }
   epd.setSPIPins(CS_PIN, MOSI_PIN, CLK_PIN, DC_PIN, RESET_PIN, BUSY_PIN);
-  epd.SPIbegin(iPanel + EPD42_400x300, 8000000); // initalize library for this panel
+  epd.SPIbegin(iPanel + EPD42_400x300, 4000000); // initalize library for this panel
 //  epd.allocBuffer();
  // epd.setBuffer(ucImage);
 } /* epdBegin() */
@@ -485,12 +605,15 @@ void EPDTest(void)
   }
   
   epd.fillScreen(OBD_WHITE);
-  epd.setFont(FONT_12x16);
   epd.setTextColor(OBD_BLACK, OBD_WHITE);
+  if (epd.width() < 296)
+     epd.setFont(FONT_8x8);
+  else
+     epd.setFont(FONT_12x16);
   epd.println("EPD Test");
   epd.print("Panel size: ");
   epd.print(epd.width(), DEC);
-  epd.print(" x ");
+  epd.print("x");
   epd.println(epd.height(), DEC);
   if (epd.getBuffer())
      epd.println("With backbuffer");
@@ -524,6 +647,9 @@ void setup() {
   oled.fillScreen(OBD_WHITE);
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
+ // Serial.begin(115200);
+ // delay(3000);
+ // Serial.println("EPD BLE Tester");
 } /* setup() */
 
 void loop() {

@@ -11,6 +11,7 @@
 #import "MyBLE.h"
 
 @interface ViewController : NSViewController
+@property (weak) IBOutlet NSPopUpButton *myPopUp;
 
 @property (nonatomic, retain) DragDropView *myview;
 @property (nonatomic) NSString *filename;
@@ -19,6 +20,7 @@
 @property (weak) IBOutlet NSTextField *InfoLabel;
 @property (weak) IBOutlet NSButtonCell *DitherCheck;
 @property (weak) IBOutlet NSButton *ConnectButton;
+@property (weak) IBOutlet NSButtonCell *InvertCheck;
 
 // Process a new file
 - (void)processFile:(NSString *)path;

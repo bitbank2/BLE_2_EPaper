@@ -5,7 +5,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".SecondFragment">
-
+    <TextView
+        android:id="@+id/textview_second"
+        android:layout_width = "wrap_content"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/textview2_second"
+        app:layout_constraintTop_toTopOf="parent" />
+    <TextView
+        android:id="@+id/textview2_second"
+        android:layout_width = "wrap_content"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/imageview_second"
+        app:layout_constraintTop_toBottomOf="@id/textview_second" />
     <ImageView
         android:id="@+id/imageview_second"
         android:layout_width="match_parent"
@@ -13,8 +30,27 @@
         android:adjustViewBounds="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/button_open"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBottom_toTopOf="@id/checkbox_second"
+        app:layout_constraintTop_toBottomOf="@id/textview2_second" />
+    <CheckBox
+        android:id="@+id/checkbox_second"
+        android:text="Dither"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/button_clear"
+        app:layout_constraintTop_toBottomOf="@id/imageview_second" />
+        />
+    <Button
+        android:id="@+id/button_connect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/connect"
+        app:layout_constraintBottom_toTopOf="@id/button_clear"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/checkbox_second" />
     <Button
         android:id="@+id/button_clear"
         android:layout_width="wrap_content"
@@ -23,7 +59,7 @@
         app:layout_constraintBottom_toTopOf="@id/button_open"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/imageview_second" />
+        app:layout_constraintTop_toBottomOf="@id/checkbox_second" />
     <Button
         android:id="@+id/button_open"
         android:layout_width="wrap_content"
